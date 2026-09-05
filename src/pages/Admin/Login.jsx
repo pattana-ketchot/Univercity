@@ -1,144 +1,213 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
-import { Lock, Mail, Eye, EyeOff } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Mail, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
+import { supabase, isConfigured } from '../../lib/supabase'
+import {
+  fetchAdminSession,
+  canAccessAdminArea,
+  friendlyAuthError,
+  isValidEmail,
+  validateLoginForm,
+} from '../../lib/adminAuth'
+import AdminAuthLayout from '../../components/admin/auth/AdminAuthLayout'
+import AdminAuthCard from '../../components/admin/auth/AdminAuthCard'
+import AdminAuthInput from '../../components/admin/auth/AdminAuthInput'
+import PasswordInput from '../../components/admin/auth/PasswordInput'
+
+const REMEMBER_KEY = 'admin_remember_email'
 
 const AdminLogin = () => {
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
 
-  const handleLogin = async (e) => {
+  const [form, setForm] = useState({ email: '', password: '' })
+  const [remember, setRemember] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState({})
+  const [formError, setFormError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [checkingSession, setCheckingSession] = useState(true)
+
+  // ผู้ดูแลระบบที่ล็อกอินอยู่แล้ว -> ไปแดชบอร์ดทันที
+  useEffect(() => {
+    let active = true
+    ;(async () => {
+      try {
+        const stored = localStorage.getItem(REMEMBER_KEY)
+        if (stored && active) {
+          setForm((f) => ({ ...f, email: stored }))
+          setRemember(true)
+        }
+      } catch { /* ignore storage errors */ }
+
+      const { user, role, status } = await fetchAdminSession()
+      if (!active) return
+      if (user && canAccessAdminArea(role, status)) {
+        navigate('/admin/dashboard', { replace: true })
+        return
+      }
+      setCheckingSession(false)
+    })()
+    return () => { active = false }
+  }, [navigate])
+
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    setForm((prev) => ({ ...prev, [name]: value }))
+    setFieldErrors((prev) => ({ ...prev, [name]: undefined }))
+    setFormError('')
+  }
+
+  const handleForgotPassword = async () => {
+    setNotice('')
+    setFormError('')
+    const email = form.email.trim()
+    if (!isValidEmail(email)) {
+      setFieldErrors((prev) => ({ ...prev, email: 'กรอกอีเมลให้ถูกต้องก่อน แล้วกด "ลืมรหัสผ่าน?" อีกครั้ง' }))
+      return
+    }
+    if (!isConfigured) {
+      setFormError('ยังไม่ได้ตั้งค่า Supabase (ดู ADMIN_SETUP.md)')
+      return
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/admin/login`,
+    })
+    if (error) {
+      setFormError(friendlyAuthError(error))
+      return
+    }
+    setNotice(`ส่งลิงก์รีเซ็ตรหัสผ่านไปที่ ${email} แล้ว (หากมีบัญชีนี้ในระบบ)`)
+  }
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    setLoading(true)
-    setError('')
+    setFormError('')
+    setNotice('')
 
+    const errors = validateLoginForm(form)
+    setFieldErrors(errors)
+    if (Object.keys(errors).length > 0) return
+
+    if (!isConfigured) {
+      setFormError('ยังไม่ได้ตั้งค่า Supabase กรุณาดูวิธีตั้งค่าใน ADMIN_SETUP.md')
+      return
+    }
+
+    setIsLoading(true)
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
+        email: form.email.trim(),
+        password: form.password,
       })
 
-      if (error) throw error
-
-      // ตรวจสอบ role
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('role')
-        .eq('user_id', data.user.id)
-        .single()
-
-      if (!profile || (profile.role !== 'admin' && profile.role !== 'editor')) {
-        await supabase.auth.signOut()
-        setError('คุณไม่มีสิทธิ์เข้าถึงระบบ Admin')
-        setLoading(false)
+      if (error) {
+        setFormError(friendlyAuthError(error))
         return
       }
 
-      navigate('/admin/dashboard')
-    } catch (error) {
-      setError(error.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ')
+      // ไม่เช็ค role/status ซ้ำที่นี่ — <ProtectedAdminRoute> ที่ครอบทุกหน้า /admin/*
+      // จะเป็นคนตัดสินและแสดงหน้า "รอการอนุมัติ"/"ไม่มีสิทธิ์" ที่ออกแบบไว้แล้วเอง
+      // (กันไม่ให้ผู้ใช้เจอ UX คนละแบบสำหรับ DB state เดียวกัน)
+      try {
+        if (remember) localStorage.setItem(REMEMBER_KEY, form.email.trim())
+        else localStorage.removeItem(REMEMBER_KEY)
+      } catch { /* ignore storage errors */ }
+
+      navigate('/admin/dashboard', { replace: true })
+    } catch (err) {
+      setFormError(friendlyAuthError(err))
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-pnru to-green-600 flex items-center justify-center px-4">
-      <div className="max-w-md w-full">
-        {/* Card */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-pnru rounded-full flex items-center justify-center mx-auto mb-4">
-              <Lock className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Admin Login</h1>
-            <p className="text-gray-600">เข้าสู่ระบบจัดการหลังบ้าน</p>
-          </div>
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen bg-[#F7FAF8] flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-pnru" />
+      </div>
+    )
+  }
 
-          {/* Error Message */}
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{error}</p>
+  return (
+    <AdminAuthLayout>
+      <AdminAuthCard
+        title="Admin Portal"
+        subtitle="เข้าสู่ระบบสำหรับผู้ดูแลระบบ"
+        footer={
+          <>
+            ยังไม่มีบัญชีผู้ดูแลระบบ?{' '}
+            <Link to="/admin/register" className="font-medium text-pnru hover:underline">
+              สร้างบัญชี
+            </Link>
+          </>
+        }
+      >
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
+          {formError && (
+            <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl p-3">
+              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <span>{formError}</span>
+            </div>
+          )}
+          {notice && (
+            <div className="flex items-start gap-2 bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl p-3">
+              <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <span>{notice}</span>
             </div>
           )}
 
-          {/* Form */}
-          <form onSubmit={handleLogin} className="space-y-6">
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                อีเมล
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pnru focus:border-transparent"
-                  placeholder="admin@example.com"
-                />
-              </div>
-            </div>
+          <AdminAuthInput
+            label="อีเมล"
+            name="email"
+            type="email"
+            autoComplete="username"
+            icon={Mail}
+            placeholder="admin@example.com"
+            value={form.email}
+            onChange={handleChange}
+            error={fieldErrors.email}
+          />
 
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                รหัสผ่าน
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pnru focus:border-transparent"
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-            </div>
+          <PasswordInput
+            name="password"
+            autoComplete="current-password"
+            placeholder="••••••••"
+            value={form.password}
+            onChange={handleChange}
+            error={fieldErrors.password}
+          />
 
-            {/* Submit Button */}
+          <div className="flex items-center justify-between text-sm">
+            <label className="flex items-center gap-2 text-gray-600 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-pnru focus:ring-pnru/30"
+              />
+              จดจำฉัน
+            </label>
             <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-pnru text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              type="button"
+              onClick={handleForgotPassword}
+              className="font-medium text-pnru hover:underline"
             >
-              {loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
-            </button>
-          </form>
-
-          {/* Footer */}
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => navigate('/')}
-              className="text-sm text-pnru hover:text-green-700 font-medium"
-            >
-              ← กลับสู่หน้าหลัก
+              ลืมรหัสผ่าน?
             </button>
           </div>
-        </div>
 
-        {/* Info */}
-        <div className="mt-6 text-center text-white text-sm">
-          <p>สำหรับผู้ดูแลระบบเท่านั้น</p>
-        </div>
-      </div>
-    </div>
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full flex items-center justify-center gap-2 bg-pnru hover:bg-green-800 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-xl transition-colors"
+          >
+            {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
+          </button>
+        </form>
+      </AdminAuthCard>
+    </AdminAuthLayout>
   )
 }
 

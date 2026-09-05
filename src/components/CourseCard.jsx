@@ -1,19 +1,24 @@
+import { Link } from 'react-router-dom'
+
 const CourseCard = ({ id, logo, title, titleEn, description }) => {
   return (
-    <div className="min-w-[300px] max-w-[320px] bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col overflow-hidden">
+    <div className="w-full h-full bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col overflow-hidden">
       {/* Card Content */}
       <div className="p-6 flex flex-col flex-grow items-center text-center">
         {/* Logo/Icon Section */}
         <div className="w-24 h-24 flex items-center justify-center mb-5 overflow-hidden">
-          <img
-            src={logo}
-            alt={title}
-            className="w-full h-full object-contain"
-            onError={(e) => {
-              e.target.style.display = 'none'
-              e.target.parentElement.innerHTML = '<div class="text-5xl">📚</div>'
-            }}
-          />
+          {logo ? (
+            <img
+              src={logo}
+              alt={title}
+              className="w-full h-full object-contain"
+              onError={(e) => {
+                e.target.style.display = 'none'
+                e.target.nextSibling.style.display = 'block'
+              }}
+            />
+          ) : null}
+          <div className="text-5xl" style={{ display: logo ? 'none' : 'block' }}>📚</div>
         </div>
 
         {/* Course Title (Thai) */}
@@ -27,7 +32,7 @@ const CourseCard = ({ id, logo, title, titleEn, description }) => {
         </p>
 
         {/* Description */}
-        <p className="text-gray-600 text-sm leading-relaxed flex-grow mb-5">
+        <p className="text-gray-600 text-sm leading-relaxed flex-grow mb-5 line-clamp-3">
           {description}
         </p>
 
@@ -35,8 +40,8 @@ const CourseCard = ({ id, logo, title, titleEn, description }) => {
         <div className="w-full h-px bg-gray-200 mb-5"></div>
 
         {/* View Details Button */}
-        <a
-          href={id ? `/courses/${id}` : '#'}
+        <Link
+          to={id ? `/courses/${id}` : '#'}
           className="text-pnru font-medium text-sm flex items-center justify-center gap-2 group hover:text-primary-dark transition-colors"
         >
           <span>ดูรายละเอียด</span>
@@ -53,7 +58,7 @@ const CourseCard = ({ id, logo, title, titleEn, description }) => {
               d="M9 5l7 7-7 7"
             />
           </svg>
-        </a>
+        </Link>
       </div>
     </div>
   )

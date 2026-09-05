@@ -1,156 +1,42 @@
 import { useState, useMemo, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { Search, GraduationCap, Scale, Briefcase, Star, ArrowRight } from 'lucide-react'
 import { supabase, isConfigured } from '../lib/supabase'
 
 const AllCourses = () => {
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('all')
   const [sortBy, setSortBy] = useState('a-z')
   const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(true)
 
-  const categories = [
-    { id: 'all', label: 'ทั้งหมด' },
-    { id: 'computer', label: 'คอมพิวเตอร์และเทคโนโลยี' },
-    { id: 'health', label: 'วิทยาศาสตร์สุขภาพ' },
-    { id: 'science', label: 'วิทยาศาสตร์และสิ่งแวดล้อม' },
-    { id: 'business', label: 'ธุรกิจและการจัดการ' }
-  ]
-
-  // ข้อมูล fallback
-  const fallbackCourses = [
-    {
-      id: 1,
-      title: 'วิทยาการคอมพิวเตอร์',
-      title_en: 'Computer Science',
-      description: 'เรียนรู้การพัฒนาซอฟต์แวร์ AI และ Data Science',
-      category: 'computer',
-      logo: '/assets/courses/computer.png'
-    },
-    {
-      id: 2,
-      title: 'เทคโนโลยีสารสนเทศ',
-      title_en: 'Information Technology',
-      description: 'การจัดการระบบ เครือข่าย และความปลอดภัย',
-      category: 'computer',
-      logo: '/assets/courses/it.png'
-    },
-    {
-      id: 3,
-      title: 'คณิตศาสตร์',
-      title_en: 'Mathematics',
-      description: 'พื้นฐานทางคณิตศาสตร์และการประยุกต์',
-      category: 'science',
-      logo: '/assets/courses/math.png'
-    },
-    {
-      id: 4,
-      title: 'คอมพิวเตอร์แอนิเมชันและมัลติมีเดีย',
-      title_en: 'Computer Animation and Multimedia',
-      description: 'สร้างสรรค์งานแอนิเมชันและสื่อดิจิทัล',
-      category: 'computer',
-      logo: '/assets/courses/animation.png'
-    },
-    {
-      id: 5,
-      title: 'การจัดการสิ่งแวดล้อม',
-      title_en: 'Environmental Management',
-      description: 'อนุรักษ์และจัดการทรัพยากรธรรมชาติ',
-      category: 'science',
-      logo: '/assets/courses/env.png'
-    },
-    {
-      id: 6,
-      title: 'วิทยาศาสตร์เครื่องสำอาง',
-      title_en: 'Cosmetic Science',
-      description: 'วิจัยและพัฒนาผลิตภัณฑ์เครื่องสำอาง',
-      category: 'health',
-      logo: '/assets/courses/cosmetic.png'
-    },
-    {
-      id: 7,
-      title: 'เทคโนโลยีอาหารและความเป็นผู้ประกอบการสมัยใหม่',
-      title_en: 'Food Technology and Modern Entrepreneurship',
-      description: 'นวัตกรรมอาหารและการทำธุรกิจ',
-      category: 'business',
-      logo: '/assets/courses/food.png'
-    },
-    {
-      id: 8,
-      title: 'การแพทย์แผนไทยประยุกต์',
-      title_en: 'Applied Thai Traditional Medicine',
-      description: 'แพทย์แผนไทยผสมผสานเทคโนโลยีสมัยใหม่',
-      category: 'health',
-      logo: '/assets/courses/medicine.png'
-    },
-    {
-      id: 9,
-      title: 'เทคโนโลยีการเกษตรสมัยใหม่',
-      title_en: 'Modern Agricultural Technology',
-      description: 'เกษตรอัจฉริยะและเทคโนโลยีการผลิต',
-      category: 'science',
-      logo: '/assets/courses/agri.png'
-    },
-    {
-      id: 10,
-      title: 'เทคโนโลยีผลิตภัณฑ์ชีวภาพเพื่อการประกอบธุรกิจ',
-      title_en: 'Bioproduct Technology for Business',
-      description: 'ผลิตภัณฑ์ชีวภาพและการพาณิชย์',
-      category: 'business',
-      logo: '/assets/courses/bio.png'
-    }
-  ]
-
   useEffect(() => {
+    const fetchCourses = async () => {
+      if (!isConfigured) {
+        setLoading(false)
+        return
+      }
+      const { data } = await supabase
+        .from('courses')
+        .select('id, title, title_en, description, logo')
+        .order('title', { ascending: true })
+
+      setCourses(data || [])
+      setLoading(false)
+    }
     fetchCourses()
   }, [])
-
-  const fetchCourses = async () => {
-    // ถ้ายังไม่ได้ตั้งค่า Supabase ให้ใช้ข้อมูล fallback
-    if (!isConfigured) {
-      setCourses(fallbackCourses)
-      setLoading(false)
-      return
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('courses')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('Error fetching courses:', error)
-        setCourses(fallbackCourses)
-      } else if (data && data.length > 0) {
-        setCourses(data)
-      } else {
-        setCourses(fallbackCourses)
-      }
-    } catch (error) {
-      console.error('Error:', error)
-      setCourses(fallbackCourses)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   // Filter and sort courses
   const filteredCourses = useMemo(() => {
     let filtered = courses
 
-    // Filter by category
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(course => course.category === selectedCategory)
-    }
-
     // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter(course =>
-        course.title.toLowerCase().includes(query) ||
-        course.title_en.toLowerCase().includes(query) ||
-        course.description.toLowerCase().includes(query)
+        (course.title || '').toLowerCase().includes(query) ||
+        (course.title_en || '').toLowerCase().includes(query) ||
+        (course.description || '').toLowerCase().includes(query)
       )
     }
 
@@ -162,18 +48,7 @@ const AllCourses = () => {
     }
 
     return filtered
-  }, [courses, searchQuery, selectedCategory, sortBy])
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-pnru mb-4"></div>
-          <p className="text-gray-600">กำลังโหลดหลักสูตร...</p>
-        </div>
-      </div>
-    )
-  }
+  }, [courses, searchQuery, sortBy])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -212,24 +87,8 @@ const AllCourses = () => {
             />
           </div>
 
-          {/* Category Tabs and Sort */}
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="flex flex-wrap gap-2 overflow-x-auto pb-2 lg:pb-0">
-              {categories.map(cat => (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all ${
-                    selectedCategory === cat.id
-                      ? 'bg-pnru text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
-            </div>
-
+          {/* Sort */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-end gap-4">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
@@ -245,8 +104,12 @@ const AllCourses = () => {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* Course Cards */}
           <div className="lg:col-span-4">
-            {filteredCourses.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5">
+            {loading ? (
+              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-500">
+                กำลังโหลดหลักสูตร...
+              </div>
+            ) : filteredCourses.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5">
                 {filteredCourses.map(course => (
                   <div
                     key={course.id}
@@ -276,7 +139,7 @@ const AllCourses = () => {
                       <p className="text-xs text-gray-500 mb-3 text-center">
                         {course.title_en}
                       </p>
-                      <p className="text-sm text-gray-600 text-center mb-4 flex-1">
+                      <p className="text-sm text-gray-600 text-center mb-4 flex-1 line-clamp-3">
                         {course.description}
                       </p>
 
@@ -284,13 +147,13 @@ const AllCourses = () => {
                       <hr className="border-gray-200 mb-4" />
 
                       {/* Link */}
-                      <a
-                        href={`/courses/${course.id}`}
+                      <Link
+                        to={`/courses/${course.id}`}
                         className="flex items-center justify-center gap-2 text-pnru hover:text-opacity-80 font-medium text-sm transition-colors"
                       >
                         ดูรายละเอียด
                         <ArrowRight className="w-4 h-4" />
-                      </a>
+                      </Link>
                     </div>
                   </div>
                 ))}
@@ -299,7 +162,7 @@ const AllCourses = () => {
               <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
                 <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-700 mb-2">ไม่พบหลักสูตรที่ค้นหา</h3>
-                <p className="text-gray-500">ลองใช้คำค้นหาอื่น หรือเลือกหมวดหมู่ทั้งหมด</p>
+                <p className="text-gray-500">ลองใช้คำค้นหาอื่น</p>
               </div>
             )}
           </div>
@@ -314,8 +177,8 @@ const AllCourses = () => {
 
               <div className="space-y-3">
                 {/* Compare Tool */}
-                <a
-                  href="/compare"
+                <Link
+                  to="/compare"
                   className="block p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors group"
                 >
                   <div className="flex items-start gap-3">
@@ -329,11 +192,11 @@ const AllCourses = () => {
                       </p>
                     </div>
                   </div>
-                </a>
+                </Link>
 
                 {/* Career Tool */}
-                <a
-                  href="/careers"
+                <Link
+                  to="/careers"
                   className="block p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors group"
                 >
                   <div className="flex items-start gap-3">
@@ -347,7 +210,7 @@ const AllCourses = () => {
                       </p>
                     </div>
                   </div>
-                </a>
+                </Link>
               </div>
             </div>
           </aside>

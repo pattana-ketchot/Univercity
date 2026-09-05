@@ -1,92 +1,36 @@
-import { useState, useEffect, useRef } from 'react'
+import { useRef, useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import CourseCard from './CourseCard'
 import { supabase, isConfigured } from '../lib/supabase'
+import Reveal from './Reveal'
 
 const CourseCarousel = () => {
   const scrollRef = useRef(null)
   const [courses, setCourses] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  // ข้อมูล fallback สำหรับกรณีที่ยังไม่ได้ตั้งค่า Supabase
-  const fallbackCourses = [
-    {
-      logo: '/assets/courses/engineering.png',
-      title: 'วิศวกรรมศาสตร์',
-      titleEn: 'Engineering',
-      description: 'พัฒนาทักษะทางด้านวิศวกรรมและเทคโนโลยีสมัยใหม่'
-    },
-    {
-      logo: '/assets/courses/business.png',
-      title: 'บริหารธุรกิจ',
-      titleEn: 'Business Administration',
-      description: 'เรียนรู้การบริหารจัดการและพัฒนาธุรกิจอย่างมืออาชีพ'
-    },
-    {
-      logo: '/assets/courses/computer.png',
-      title: 'วิทยาการคอมพิวเตอร์',
-      titleEn: 'Computer Science',
-      description: 'ศึกษาเทคโนโลยีดิจิทัลและการพัฒนาซอฟต์แวร์'
-    },
-    {
-      logo: '/assets/courses/medicine.png',
-      title: 'แพทยศาสตร์',
-      titleEn: 'Medicine',
-      description: 'การศึกษาด้านการแพทย์และสาธารณสุขอย่างครบวงจร'
-    },
-    {
-      logo: '/assets/courses/arts.png',
-      title: 'ศิลปกรรมศาสตร์',
-      titleEn: 'Fine Arts',
-      description: 'พัฒนาความคิดสร้างสรรค์และทักษะทางศิลปะ'
-    },
-    {
-      logo: '/assets/courses/law.png',
-      title: 'นิติศาสตร์',
-      titleEn: 'Law',
-      description: 'ศึกษากฎหมายและระบบกระบวนการยุติธรรม'
-    },
-    {
-      logo: '/assets/courses/science.png',
-      title: 'วิทยาศาสตร์',
-      titleEn: 'Science',
-      description: 'ค้นพบและเรียนรู้วิทยาศาสตร์ในทุกมิติ'
-    }
-  ]
+  const [status, setStatus] = useState('loading') // loading | ready | error
 
   useEffect(() => {
-    fetchCourses()
-  }, [])
-
-  const fetchCourses = async () => {
-    // ถ้ายังไม่ได้ตั้งค่า Supabase ให้ใช้ข้อมูล fallback
-    if (!isConfigured) {
-      setCourses(fallbackCourses)
-      setLoading(false)
-      return
-    }
-
-    try {
+    const fetchCourses = async () => {
+      if (!isConfigured) {
+        setStatus('ready')
+        return
+      }
       const { data, error } = await supabase
         .from('courses')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(10)
+        .select('id, title, title_en, description, logo')
+        .order('created_at', { ascending: true })
+        .limit(8)
 
       if (error) {
-        console.error('Error fetching courses:', error)
-        setCourses(fallbackCourses)
-      } else if (data && data.length > 0) {
-        setCourses(data)
-      } else {
-        setCourses(fallbackCourses)
+        setStatus('error')
+        return
       }
-    } catch (error) {
-      console.error('Error:', error)
-      setCourses(fallbackCourses)
-    } finally {
-      setLoading(false)
+
+      setCourses(data || [])
+      setStatus('ready')
     }
-  }
+    fetchCourses()
+  }, [])
 
   const scroll = (direction) => {
     if (scrollRef.current) {
@@ -98,64 +42,69 @@ const CourseCarousel = () => {
     }
   }
 
-  if (loading) {
-    return (
-      <section className="bg-white">
-        <div className="max-w-[1920px] mx-auto px-12 mb-4 py-8">
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-pnru"></div>
-            <p className="mt-4 text-gray-600">กำลังโหลดหลักสูตร...</p>
-          </div>
-        </div>
-      </section>
-    )
-  }
-
   return (
     <section className="bg-white">
-      <div className="max-w-[1920px] mx-auto px-12 mb-4">
+      <div className="max-w-[1920px] mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 mb-4">
         {/* Section Header */}
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold text-pnru">หลักสูตรในคณะวิทยาศาสตร์และเทคโนโลยี</h2>
-          <a href="/courses" className="text-pnru font-medium hover:underline">
+        <Reveal as="div" className="flex items-center justify-between gap-3 mb-4 sm:mb-6 md:mb-8">
+          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-pnru">หลักสูตรในคณะวิทยาศาสตร์และเทคโนโลยี</h2>
+          <Link to="/courses" className="flex-shrink-0 whitespace-nowrap text-sm md:text-base text-pnru font-medium hover:underline">
             ดูหลักสูตรทั้งหมด →
-          </a>
-        </div>
+          </Link>
+        </Reveal>
 
         {/* Carousel */}
-        <div className="relative">
-          {/* Left Arrow */}
-          <button
-            onClick={() => scroll('left')}
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition"
-          >
-            <span className="text-xl text-primary">‹</span>
-          </button>
+        <Reveal delay={140}>
+        {status === 'loading' ? (
+          <p className="text-center text-gray-500 py-8">กำลังโหลดหลักสูตร...</p>
+        ) : status === 'error' ? (
+          <p className="text-center text-gray-500 py-8">ไม่สามารถโหลดข้อมูลหลักสูตรได้ในขณะนี้</p>
+        ) : courses.length === 0 ? (
+          <p className="text-center text-gray-500 py-8">ยังไม่มีข้อมูลหลักสูตร</p>
+        ) : (
+          <div className="relative">
+            {/* Left Arrow */}
+            <button
+              onClick={() => scroll('left')}
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 md:-translate-x-4 z-10 w-8 h-8 md:w-10 md:h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition"
+            >
+              <span className="text-lg md:text-xl text-primary">‹</span>
+            </button>
 
-          {/* Cards Container */}
-          <div
-            ref={scrollRef}
-            className="flex space-x-4 overflow-x-auto course-scroll pb-2"
-          >
-            {courses.map((course, index) => (
-              <CourseCard
-                key={course.id || index}
-                logo={course.logo}
-                title={course.title}
-                titleEn={course.title_en}
-                description={course.description}
-              />
-            ))}
+            {/* Cards Container — fade-only stagger (no transform) so it never fights horizontal swipe/scroll */}
+            <div
+              ref={scrollRef}
+              className="flex space-x-4 overflow-x-auto course-scroll pb-2"
+            >
+              {courses.map((course, index) => (
+                <Reveal
+                  as="div"
+                  key={course.id}
+                  direction="fade"
+                  delay={index * 80}
+                  className="w-[min(85vw,300px)] xl:w-[310px] 2xl:w-[320px] flex-shrink-0"
+                >
+                  <CourseCard
+                    id={course.id}
+                    logo={course.logo}
+                    title={course.title}
+                    titleEn={course.title_en}
+                    description={course.description}
+                  />
+                </Reveal>
+              ))}
+            </div>
+
+            {/* Right Arrow */}
+            <button
+              onClick={() => scroll('right')}
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 md:translate-x-4 z-10 w-8 h-8 md:w-10 md:h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition"
+            >
+              <span className="text-lg md:text-xl text-primary">›</span>
+            </button>
           </div>
-
-          {/* Right Arrow */}
-          <button
-            onClick={() => scroll('right')}
-            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition"
-          >
-            <span className="text-xl text-primary">›</span>
-          </button>
-        </div>
+        )}
+        </Reveal>
       </div>
     </section>
   )

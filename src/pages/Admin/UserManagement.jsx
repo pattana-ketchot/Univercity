@@ -1,349 +1,172 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback } from 'react'
+import { useAdminAuth } from '../../hooks/useAdminAuth'
+import AdminLayout from '../../components/admin/AdminLayout'
+import { useToast } from '../../components/admin/Toast'
 import { supabase } from '../../lib/supabase'
-import {
-  Users,
-  Shield,
-  Edit2,
-  Trash2,
-  ArrowLeft,
-  Search,
-  Crown,
-  Pencil,
-  User as UserIcon
-} from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 
-const UserManagement = () => {
-  const navigate = useNavigate()
-  const [users, setUsers] = useState([])
+const ROLES = ['user', 'editor', 'admin']
+
+const formatDate = (value) => {
+  if (!value) return '-'
+  try {
+    return new Date(value).toLocaleDateString('th-TH', { dateStyle: 'medium' })
+  } catch {
+    return value
+  }
+}
+
+const UserManagementContent = ({ currentUserId }) => {
+  const showToast = useToast()
+  const [profiles, setProfiles] = useState([])
   const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [currentUser, setCurrentUser] = useState(null)
+  const [loadError, setLoadError] = useState('')
 
-  useEffect(() => {
-    checkCurrentUser()
-    fetchUsers()
+  const fetchProfiles = useCallback(async () => {
+    setLoading(true)
+    setLoadError('')
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('id, user_id, role, status, full_name, email, created_at')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      setLoadError('โหลดข้อมูลผู้ใช้งานไม่สำเร็จ: ' + error.message)
+      setProfiles([])
+      setLoading(false)
+      return
+    }
+
+    setProfiles(data || [])
+    setLoading(false)
   }, [])
 
-  const checkCurrentUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      navigate('/admin/login')
+  useEffect(() => {
+    fetchProfiles()
+  }, [fetchProfiles])
+
+  const handleRoleChange = async (userId, role) => {
+    const { error } = await supabase.from('user_profiles').update({ role }).eq('user_id', userId)
+    if (error) {
+      showToast('เปลี่ยน role ไม่สำเร็จ: ' + error.message, 'error')
       return
     }
+    showToast('เปลี่ยน role เรียบร้อยแล้ว', 'success')
+    fetchProfiles()
+  }
 
-    // ตรวจสอบว่าเป็น admin หรือไม่
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!profile || profile.role !== 'admin') {
-      alert('คุณไม่มีสิทธิ์เข้าถึงหน้านี้')
-      navigate('/admin/dashboard')
+  const handleStatusChange = async (userId, status) => {
+    const { error } = await supabase.from('user_profiles').update({ status }).eq('user_id', userId)
+    if (error) {
+      showToast('อัปเดตสถานะไม่สำเร็จ: ' + error.message, 'error')
       return
     }
-
-    setCurrentUser(user)
-  }
-
-  const fetchUsers = async () => {
-    setLoading(true)
-    try {
-      // ดึงข้อมูล users จาก user_profiles
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-
-      // ดึงข้อมูล email จาก auth.users ผ่าน RPC function
-      const usersWithEmail = await Promise.all(
-        (data || []).map(async (profile) => {
-          // ใช้ admin API เพื่อดึง email
-          const { data: { user }, error } = await supabase.auth.admin.getUserById(profile.user_id)
-
-          return {
-            ...profile,
-            email: user?.email || 'N/A'
-          }
-        })
-      )
-
-      setUsers(usersWithEmail)
-    } catch (error) {
-      console.error('Error fetching users:', error)
-      // ถ้า admin API ไม่ทำงาน ให้ดึงแบบธรรมดา
-      const { data } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      setUsers(data || [])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleRoleChange = async (userId, newRole) => {
-    if (!confirm(`คุณต้องการเปลี่ยน Role เป็น "${newRole}" หรือไม่?`)) return
-
-    const { error } = await supabase
-      .from('user_profiles')
-      .update({ role: newRole })
-      .eq('user_id', userId)
-
-    if (error) {
-      alert('เกิดข้อผิดพลาด: ' + error.message)
-    } else {
-      alert('เปลี่ยน Role สำเร็จ')
-      fetchUsers()
-    }
-  }
-
-  const handleDeleteUser = async (userId) => {
-    if (!confirm('คุณแน่ใจหรือไม่ที่จะลบผู้ใช้นี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้')) return
-
-    const { error } = await supabase
-      .from('user_profiles')
-      .delete()
-      .eq('user_id', userId)
-
-    if (error) {
-      alert('เกิดข้อผิดพลาด: ' + error.message)
-    } else {
-      alert('ลบผู้ใช้สำเร็จ')
-      fetchUsers()
-    }
-  }
-
-  const getRoleBadge = (role) => {
-    switch (role) {
-      case 'admin':
-        return {
-          icon: <Crown className="w-4 h-4" />,
-          color: 'bg-purple-100 text-purple-700 border-purple-200',
-          label: 'Admin'
-        }
-      case 'editor':
-        return {
-          icon: <Pencil className="w-4 h-4" />,
-          color: 'bg-blue-100 text-blue-700 border-blue-200',
-          label: 'Editor'
-        }
-      default:
-        return {
-          icon: <UserIcon className="w-4 h-4" />,
-          color: 'bg-gray-100 text-gray-700 border-gray-200',
-          label: 'User'
-        }
-    }
-  }
-
-  const filteredUsers = users.filter(user =>
-    user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.role?.toLowerCase().includes(searchQuery.toLowerCase())
-  )
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('th-TH', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
+    showToast(status === 'approved' ? 'อนุมัติผู้ดูแลระบบเรียบร้อยแล้ว' : 'ระงับบัญชีเรียบร้อยแล้ว', 'success')
+    fetchProfiles()
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => navigate('/admin/dashboard')}
-                className="p-2 hover:bg-gray-100 rounded-lg transition"
-              >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
-              </button>
-              <Users className="w-6 h-6 text-pnru" />
-              <h1 className="text-xl font-bold text-gray-800">จัดการผู้ใช้</h1>
-            </div>
-          </div>
+    <div>
+      {loadError && (
+        <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3 mb-4">
+          <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <span>{loadError}</span>
         </div>
-      </header>
+      )}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Crown className="w-6 h-6 text-purple-600" />
-              </div>
-              <span className="text-2xl font-bold text-gray-800">
-                {users.filter(u => u.role === 'admin').length}
-              </span>
-            </div>
-            <h3 className="text-sm font-medium text-gray-600">Administrators</h3>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Pencil className="w-6 h-6 text-blue-600" />
-              </div>
-              <span className="text-2xl font-bold text-gray-800">
-                {users.filter(u => u.role === 'editor').length}
-              </span>
-            </div>
-            <h3 className="text-sm font-medium text-gray-600">Editors</h3>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                <UserIcon className="w-6 h-6 text-gray-600" />
-              </div>
-              <span className="text-2xl font-bold text-gray-800">
-                {users.filter(u => u.role === 'user').length}
-              </span>
-            </div>
-            <h3 className="text-sm font-medium text-gray-600">Users</h3>
-          </div>
-        </div>
-
-        {/* Search */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 mb-6">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ค้นหาผู้ใช้ด้วย Email, ชื่อ, หรือ Role..."
-              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pnru focus:border-transparent"
-            />
-          </div>
-        </div>
-
-        {/* Users Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-pnru"></div>
-              <p className="mt-2 text-gray-600">กำลังโหลด...</p>
-            </div>
-          ) : filteredUsers.length === 0 ? (
-            <div className="text-center py-12">
-              <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600">ไม่พบผู้ใช้</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      ผู้ใช้
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Role
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      วันที่สร้าง
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      เปลี่ยน Role
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      การจัดการ
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredUsers.map((user) => {
-                    const roleBadge = getRoleBadge(user.role)
-                    const isCurrentUser = currentUser?.id === user.user_id
-
-                    return (
-                      <tr key={user.id} className={`hover:bg-gray-50 ${isCurrentUser ? 'bg-blue-50' : ''}`}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="w-10 h-10 bg-gradient-to-br from-pnru to-green-600 rounded-full flex items-center justify-center text-white font-semibold">
-                              {user.email?.[0]?.toUpperCase() || 'U'}
-                            </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
-                                {user.email || 'N/A'}
-                                {isCurrentUser && (
-                                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">คุณ</span>
-                                )}
-                              </div>
-                              <div className="text-sm text-gray-500">{user.full_name || '-'}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${roleBadge.color}`}>
-                            {roleBadge.icon}
-                            {roleBadge.label}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        {loading ? (
+          <p className="p-6 text-center text-gray-500">กำลังโหลด...</p>
+        ) : profiles.length === 0 ? (
+          <p className="p-6 text-center text-gray-500">ยังไม่มีผู้ใช้งาน</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-left text-gray-600">
+                <tr>
+                  <th className="px-4 py-3 font-medium">ชื่อ</th>
+                  <th className="px-4 py-3 font-medium">อีเมล</th>
+                  <th className="px-4 py-3 font-medium">Role</th>
+                  <th className="px-4 py-3 font-medium">สถานะ</th>
+                  <th className="px-4 py-3 font-medium">วันที่สร้าง</th>
+                </tr>
+              </thead>
+              <tbody>
+                {profiles.map((profile) => (
+                  <tr key={profile.id} className="border-t border-gray-100">
+                    <td className="px-4 py-3 text-gray-900">
+                      {profile.full_name || '(ไม่มีชื่อ)'}
+                      {profile.user_id === currentUserId && (
+                        <span className="ml-2 text-xs text-gray-400">(คุณ)</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">{profile.email || '-'}</td>
+                    <td className="px-4 py-3">
+                      <select
+                        value={profile.role}
+                        onChange={(e) => handleRoleChange(profile.user_id, e.target.value)}
+                        disabled={profile.user_id === currentUserId}
+                        className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-pnru"
+                      >
+                        {ROLES.map((role) => (
+                          <option key={role} value={role}>{role}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-4 py-3">
+                      {profile.status === 'pending' ? (
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                            รออนุมัติ
                           </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {formatDate(user.created_at)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <select
-                            value={user.role}
-                            onChange={(e) => handleRoleChange(user.user_id, e.target.value)}
-                            disabled={isCurrentUser}
-                            className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-pnru disabled:bg-gray-100 disabled:cursor-not-allowed"
-                          >
-                            <option value="user">User</option>
-                            <option value="editor">Editor</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button
-                            onClick={() => handleDeleteUser(user.user_id)}
-                            disabled={isCurrentUser}
-                            className="text-red-600 hover:text-red-900 disabled:text-gray-400 disabled:cursor-not-allowed"
-                            title={isCurrentUser ? 'ไม่สามารถลบตัวเองได้' : 'ลบผู้ใช้'}
-                          >
-                            <Trash2 className="w-4 h-4 inline" />
-                          </button>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Info Box */}
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <Shield className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-blue-800">
-              <p className="font-semibold mb-1">ข้อมูลเกี่ยวกับ Role:</p>
-              <ul className="space-y-1 text-blue-700">
-                <li>• <strong>Admin:</strong> สิทธิ์เต็ม - จัดการทุกอย่างรวมถึงผู้ใช้</li>
-                <li>• <strong>Editor:</strong> เพิ่ม แก้ไข หลักสูตรและข่าวสาร (ลบไม่ได้)</li>
-                <li>• <strong>User:</strong> ดูข้อมูลเท่านั้น ไม่สามารถแก้ไขได้</li>
-              </ul>
-            </div>
+                          {profile.user_id !== currentUserId && (
+                            <button
+                              onClick={() => handleStatusChange(profile.user_id, 'approved')}
+                              className="text-xs font-medium text-pnru hover:underline"
+                            >
+                              อนุมัติ
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                            อนุมัติแล้ว
+                          </span>
+                          {profile.user_id !== currentUserId && (
+                            <button
+                              onClick={() => handleStatusChange(profile.user_id, 'pending')}
+                              className="text-xs font-medium text-gray-400 hover:text-red-600 hover:underline"
+                            >
+                              ระงับ
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">{formatDate(profile.created_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
+        )}
       </div>
     </div>
+  )
+}
+
+const UserManagement = () => {
+  const { user, role, loading: authLoading, logout } = useAdminAuth({ requireAdmin: true })
+
+  if (authLoading) {
+    return <div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-500">กำลังตรวจสอบสิทธิ์...</div>
+  }
+
+  return (
+    <AdminLayout active="users" title="จัดการผู้ใช้งาน" user={user} role={role} onLogout={logout}>
+      <UserManagementContent currentUserId={user?.id} />
+    </AdminLayout>
   )
 }
 

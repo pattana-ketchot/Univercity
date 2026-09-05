@@ -11,9 +11,9 @@ import {
   Home,
   MapPin,
   Clock,
-  Handshake,
-  Check
+  Handshake
 } from 'lucide-react'
+import { saveFindMajorAnswers } from '../lib/findMajorAnswers'
 
 const FindMajorStep4 = () => {
   const navigate = useNavigate()
@@ -46,16 +46,18 @@ const FindMajorStep4 = () => {
     { id: 'collaborative', label: 'ทำงานเดี่ยวโฟกัสกับงาน', description: 'ทำงานอิสระ', icon: Handshake }
   ]
 
-  const handleGoalToggle = (goalId) => {
+  // เก็บ label ที่ผู้ใช้เห็นจริง ไม่ใช่ id ภายใน เพราะ answers.goals/environment ถูกส่งตรงไปเป็น
+  // ข้อความในพรอมต์ของ AI แนะนำสาขา (api/recommend-major.js)
+  const handleGoalToggle = (goalLabel) => {
     setSelectedGoals(prev =>
-      prev.includes(goalId)
-        ? prev.filter(id => id !== goalId)
-        : [...prev, goalId]
+      prev.includes(goalLabel)
+        ? prev.filter(label => label !== goalLabel)
+        : [...prev, goalLabel]
     )
   }
 
-  const handleEnvironmentToggle = (envId) => {
-    setSelectedEnvironment(envId)
+  const handleEnvironmentToggle = (envLabel) => {
+    setSelectedEnvironment(envLabel)
   }
 
   const handleNext = () => {
@@ -68,9 +70,8 @@ const FindMajorStep4 = () => {
       return
     }
 
-    console.log('Selected goals:', selectedGoals)
-    console.log('Selected environment:', selectedEnvironment)
-    alert('ข้อมูลถูกบันทึกแล้ว (ขั้นตอนถัดไปยังไม่ได้สร้าง)')
+    saveFindMajorAnswers({ goals: selectedGoals, environment: selectedEnvironment })
+    navigate('/find-major/result')
   }
 
   const handleBack = () => {
@@ -170,30 +171,26 @@ const FindMajorStep4 = () => {
                   return (
                     <button
                       key={goal.id}
-                      onClick={() => handleGoalToggle(goal.id)}
-                      aria-selected={selectedGoals.includes(goal.id)}
-                      className={`relative p-4 lg:p-5 rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-pnru focus:ring-offset-2 ${
-                        selectedGoals.includes(goal.id)
+                      onClick={() => handleGoalToggle(goal.label)}
+                      aria-selected={selectedGoals.includes(goal.label)}
+                      className={`relative flex flex-col p-4 lg:p-5 rounded-lg border-2 transition-all duration-150 ease-out active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-pnru focus:ring-offset-2 ${
+                        selectedGoals.includes(goal.label)
                           ? 'border-pnru bg-green-50'
                           : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                       }`}
                     >
-                      {/* Checkmark Badge */}
-                      {selectedGoals.includes(goal.id) && (
-                        <div className="absolute top-2 right-2 w-5 h-5 bg-pnru rounded-full flex items-center justify-center">
-                          <Check className="w-3 h-3 text-white" strokeWidth={3} />
-                        </div>
-                      )}
-                      <div className="flex flex-col items-center gap-2">
+                      <div className="flex flex-1 flex-col items-center justify-center gap-2 w-full">
                         <IconComponent
                           className={`w-10 h-10 lg:w-12 lg:h-12 ${
-                            selectedGoals.includes(goal.id)
+                            selectedGoals.includes(goal.label)
                               ? 'text-pnru'
                               : 'text-gray-600'
                           }`}
                           strokeWidth={1.5}
                         />
-                        <p className="font-medium text-sm lg:text-base text-gray-800 text-center leading-tight">
+                        <p className={`font-medium text-sm lg:text-base text-center leading-tight ${
+                          selectedGoals.includes(goal.label) ? 'text-pnru' : 'text-gray-800'
+                        }`}>
                           {goal.label}
                         </p>
                         <p className="text-xs text-gray-500 text-center leading-tight">
@@ -224,30 +221,26 @@ const FindMajorStep4 = () => {
                   return (
                     <button
                       key={env.id}
-                      onClick={() => handleEnvironmentToggle(env.id)}
-                      aria-selected={selectedEnvironment === env.id}
-                      className={`relative p-4 lg:p-5 rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-pnru focus:ring-offset-2 ${
-                        selectedEnvironment === env.id
+                      onClick={() => handleEnvironmentToggle(env.label)}
+                      aria-selected={selectedEnvironment === env.label}
+                      className={`relative flex flex-col p-4 lg:p-5 rounded-lg border-2 transition-all duration-150 ease-out active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-pnru focus:ring-offset-2 ${
+                        selectedEnvironment === env.label
                           ? 'border-pnru bg-green-50'
                           : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                       }`}
                     >
-                      {/* Checkmark Badge */}
-                      {selectedEnvironment === env.id && (
-                        <div className="absolute top-2 right-2 w-5 h-5 bg-pnru rounded-full flex items-center justify-center">
-                          <Check className="w-3 h-3 text-white" strokeWidth={3} />
-                        </div>
-                      )}
-                      <div className="flex flex-col items-center gap-2">
+                      <div className="flex flex-1 flex-col items-center justify-center gap-2 w-full">
                         <IconComponent
                           className={`w-10 h-10 lg:w-12 lg:h-12 ${
-                            selectedEnvironment === env.id
+                            selectedEnvironment === env.label
                               ? 'text-pnru'
                               : 'text-gray-600'
                           }`}
                           strokeWidth={1.5}
                         />
-                        <p className="font-medium text-sm lg:text-base text-gray-800 text-center leading-tight">
+                        <p className={`font-medium text-sm lg:text-base text-center leading-tight ${
+                          selectedEnvironment === env.label ? 'text-pnru' : 'text-gray-800'
+                        }`}>
                           {env.label}
                         </p>
                         <p className="text-xs text-gray-500 text-center leading-tight">

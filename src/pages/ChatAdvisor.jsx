@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Briefcase,
   Bot,
@@ -12,102 +13,24 @@ import {
   Users
 } from 'lucide-react'
 
-// Shared course data
-const coursesData = [
-  {
-    id: 1,
-    name: 'วิทยาการคอมพิวเตอร์',
-    careers: ['นักพัฒนาซอฟต์แวร์', 'นักวิเคราะห์ระบบ', 'นักพัฒนาเกม', 'นักวิทยาศาสตร์ข้อมูล']
-  },
-  {
-    id: 2,
-    name: 'เทคโนโลยีสารสนเทศ',
-    careers: ['ผู้ดูแลระบบสารสนเทศ', 'วิศวกรเครือข่าย', 'ผู้ดูแลฐานข้อมูล']
-  },
-  {
-    id: 3,
-    name: 'คณิตศาสตร์',
-    careers: ['นักคณิตศาสตร์', 'นักวิเคราะห์ข้อมูล', 'นักสถิติ']
-  }
-]
-
 const ChatAdvisor = () => {
   const [messages, setMessages] = useState([])
   const [inputText, setInputText] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const messagesEndRef = useRef(null)
+  const messagesContainerRef = useRef(null)
   const inputRef = useRef(null)
 
+  // Scroll only the chat's own message list, not scrollIntoView() — which walks
+  // every scrollable ancestor (including the page itself) and was dragging the
+  // whole page down every time the AI replied, not just the chat box internally.
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const el = messagesContainerRef.current
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
   }
 
   useEffect(() => {
     scrollToBottom()
   }, [messages])
-
-  // Mock AI Response
-  const getMockResponse = (userMessage) => {
-    const lowerMsg = userMessage.toLowerCase()
-
-    if (lowerMsg.includes('คอมพิวเตอร์') || lowerMsg.includes('ไอที') || lowerMsg.includes('it')) {
-      return `สำหรับคนที่สนใจงานด้านคอมพิวเตอร์ เรามีหลักสูตรที่เหมาะสม:
-
-**1. วิทยาการคอมพิวเตอร์**
-- เน้นการพัฒนาซอฟต์แวร์ AI และ Data Science
-- อาชีพ: นักพัฒนาซอฟต์แวร์, นักวิเคราะห์ระบบ, นักวิทยาศาสตร์ข้อมูล
-
-**2. เทคโนโลยีสารสนเทศ**
-- เน้นการจัดการระบบ เครือข่าย และความปลอดภัย
-- อาชีพ: ผู้ดูแลระบบ, วิศวกรเครือข่าย, นักวิเคราะห์ความปลอดภัย
-
-คุณสนใจสาขาไหนเป็นพิเศษครับ?`
-    }
-
-    if (lowerMsg.includes('อาชีพ') || lowerMsg.includes('ทำงาน')) {
-      return `หลักสูตรในคณะวิทยาศาสตร์และเทคโนโลยีมีโอกาสในการทำงานที่หลากหลาย:
-
-**สายเทคโนโลยี:**
-• นักพัฒนาซอฟต์แวร์
-• วิศวกรเครือข่าย
-• นักวิเคราะห์ข้อมูล
-
-**สายวิทยาศาสตร์:**
-• นักวิจัย
-• นักวิทยาศาสตร์สิ่งแวดล้อม
-• นักเทคโนโลยีอาหาร
-
-**สายสุขภาพ:**
-• แพทย์แผนไทย
-• นักวิทยาศาสตร์เครื่องสำอาง
-
-ต้องการทราบรายละเอียดเพิ่มเติมหรือไม่ครับ?`
-    }
-
-    if (lowerMsg.includes('บริการ') || lowerMsg.includes('ช่วยเหลือ')) {
-      return `สำหรับคนที่ชอบทำงานด้านบริการและช่วยเหลือผู้อื่น แนะนำสาขา:
-
-**การแพทย์แผนไทยประยุกต์**
-- ดูแลสุขภาพผู้ป่วยด้วยภูมิปัญญาไทย
-- มีโอกาสเปิดคลินิกเป็นของตัวเอง
-
-**เทคโนโลยีอาหารและความเป็นผู้ประกอบการ**
-- สร้างผลิตภัณฑ์อาหารเพื่อสุขภาพ
-- รับใช้สังคมผ่านธุรกิจอาหาร
-
-คุณสนใจด้านไหนมากกว่ากันครับ?`
-    }
-
-    return `ขอบคุณสำหรับคำถามครับ 😊
-
-คณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยราชภัฏพระนคร มีหลักสูตรที่หลากหลาย ทั้งสาย:
-- คอมพิวเตอร์และเทคโนโลยี
-- วิทยาศาสตร์สุขภาพ
-- วิทยาศาสตร์และสิ่งแวดล้อม
-- ธุรกิจและการจัดการ
-
-คุณสนใจสาขาไหนเป็นพิเศษ หรือต้องการทราบอาชีพหลังจบในสาขาใดครับ?`
-  }
 
   const sendMessage = async (text) => {
     if (!text.trim() || isLoading) return
@@ -118,20 +41,75 @@ const ChatAdvisor = () => {
       timestamp: new Date()
     }
 
-    setMessages(prev => [...prev, userMessage])
+    const history = [...messages, userMessage]
+    setMessages(history)
     setInputText('')
     setIsLoading(true)
 
-    // Simulate AI delay
-    setTimeout(() => {
-      const aiResponse = {
-        role: 'assistant',
-        content: getMockResponse(text),
-        timestamp: new Date()
+    let started = false
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: history.map(({ role, content }) => ({ role, content }))
+        })
+      })
+
+      if (!response.ok || !response.body) {
+        const errText = await response.text().catch(() => '')
+        throw new Error(errText || 'AI request failed')
       }
-      setMessages(prev => [...prev, aiResponse])
+
+      // ข้อมูลอ้างอิง (RAG) มากับ header แบบ base64 เพราะ body เป็น plain text stream
+      // ล้วนๆ อยู่แล้ว ใส่ไว้ใน JSON ปนกับ body ไม่ได้
+      let sources = []
+      try {
+        const raw = response.headers.get('X-RAG-Sources')
+        if (raw) sources = JSON.parse(atob(raw))
+      } catch {
+        sources = []
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let content = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        content += decoder.decode(value, { stream: true })
+
+        if (!started) {
+          started = true
+          setIsLoading(false)
+          setMessages(prev => [...prev, { role: 'assistant', content, sources, timestamp: new Date() }])
+        } else {
+          setMessages(prev => {
+            const updated = [...prev]
+            updated[updated.length - 1] = { ...updated[updated.length - 1], content }
+            return updated
+          })
+        }
+      }
+
+      if (!started) {
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: 'ขออภัยครับ ไม่ได้รับคำตอบจาก AI กรุณาลองใหม่อีกครั้ง',
+          timestamp: new Date()
+        }])
+      }
+    } catch (err) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'ขออภัยครับ ระบบ AI ขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้ง',
+        timestamp: new Date()
+      }])
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   const handleSend = () => {
@@ -175,7 +153,7 @@ const ChatAdvisor = () => {
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-6">
               {messages.length === 0 ? (
                 // Empty State
                 <div className="h-full flex flex-col items-center justify-center text-center">
@@ -233,6 +211,27 @@ const ChatAdvisor = () => {
                             : 'bg-gray-100 text-gray-800'
                         }`}>
                           <div className="text-sm whitespace-pre-wrap">{msg.content}</div>
+
+                          {msg.role === 'assistant' && msg.sources?.length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-gray-200 flex flex-wrap items-center gap-1.5">
+                              <span className="text-xs text-gray-400">อ้างอิงจาก:</span>
+                              {msg.sources.map((s) => (
+                                s.source_type === 'major' ? (
+                                  <Link
+                                    key={`${s.source_type}-${s.source_id}`}
+                                    to={`/courses/${s.source_id}`}
+                                    className="text-xs text-pnru underline hover:no-underline"
+                                  >
+                                    {s.title}
+                                  </Link>
+                                ) : (
+                                  <span key={`${s.source_type}-${s.source_id}`} className="text-xs text-gray-500">
+                                    {s.title}
+                                  </span>
+                                )
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -255,23 +254,23 @@ const ChatAdvisor = () => {
                       </div>
                     </div>
                   )}
-
-                  <div ref={messagesEndRef} />
                 </div>
               )}
             </div>
 
             {/* Chat Composer */}
-            <div className="p-4 border-t border-gray-200 bg-white">
-              <div className="flex items-center gap-2">
+            <div className="p-2.5 sm:p-4 border-t border-gray-200 bg-white">
+              <div className="flex items-center gap-1 sm:gap-2">
                 <button
-                  className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
-                  aria-label="แนบไฟล์"
+                  disabled
+                  className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-gray-300 cursor-not-allowed transition-colors flex-shrink-0"
+                  aria-label="แนบไฟล์ (เร็วๆ นี้)"
+                  title="เร็วๆ นี้"
                 >
-                  <Paperclip className="w-5 h-5" />
+                  <Paperclip className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
 
-                <div className="flex-1 relative">
+                <div className="flex-1 relative min-w-0">
                   <textarea
                     ref={inputRef}
                     value={inputText}
@@ -279,25 +278,27 @@ const ChatAdvisor = () => {
                     onKeyDown={handleKeyDown}
                     placeholder="สอบถาม SCI Advisor"
                     rows="1"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pnru resize-none max-h-32"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pnru resize-none max-h-32"
                     style={{ minHeight: '42px' }}
                   />
                 </div>
 
                 <button
-                  className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
-                  aria-label="อัดเสียง"
+                  disabled
+                  className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-gray-300 cursor-not-allowed transition-colors flex-shrink-0"
+                  aria-label="อัดเสียง (เร็วๆ นี้)"
+                  title="เร็วๆ นี้"
                 >
-                  <Mic className="w-5 h-5" />
+                  <Mic className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
 
                 <button
                   onClick={handleSend}
                   disabled={!inputText.trim() || isLoading}
-                  className="w-10 h-10 flex items-center justify-center bg-pnru text-white rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                  className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-pnru text-white rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                   aria-label="ส่งข้อความ"
                 >
-                  <Send className="w-5 h-5" />
+                  <Send className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               </div>
             </div>

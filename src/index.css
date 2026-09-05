@@ -23,3 +23,159 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Hero Section entrance animation — scoped to .hero-section only */
+.hero-section {
+  --hero-anim-distance: 20px;
+}
+
+@media (max-width: 640px) {
+  .hero-section {
+    --hero-anim-distance: 12px;
+  }
+}
+
+@keyframes heroFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(var(--hero-anim-distance));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes heroFadeScale {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--hero-anim-distance) / 2)) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.hero-section .hero-anim-subtitle,
+.hero-section .hero-anim-heading,
+.hero-section .hero-anim-description,
+.hero-section .hero-anim-buttons {
+  animation: heroFadeUp 0.55s ease-out both;
+}
+
+.hero-section .hero-anim-subtitle,
+.hero-section .hero-anim-heading {
+  animation-delay: 0s;
+}
+
+.hero-section .hero-anim-description {
+  animation-delay: 0.1s;
+}
+
+.hero-section .hero-anim-buttons {
+  animation-delay: 0.2s;
+  animation-duration: 0.5s;
+}
+
+.hero-section .hero-anim-image {
+  animation: heroFadeScale 0.65s ease-out both;
+  animation-delay: 0.1s;
+}
+
+.hero-section .hero-button-pnru,
+.hero-section .hero-button-secondary {
+  transition: transform 0.2s ease, background-color 0.2s ease, filter 0.2s ease;
+}
+
+.hero-section .hero-button-pnru:hover,
+.hero-section .hero-button-secondary:hover {
+  transform: translateY(-2px);
+}
+
+.hero-section .hero-button-pnru:active,
+.hero-section .hero-button-secondary:active {
+  transform: scale(0.98);
+}
+
+/* Reusable scroll-reveal (used by src/components/Reveal.jsx), for sections below the Hero */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.55s ease-out, transform 0.55s ease-out;
+}
+
+.scroll-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 640px) {
+  .scroll-reveal {
+    transform: translateY(14px);
+    transition-duration: 0.45s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-section .hero-anim-subtitle,
+  .hero-section .hero-anim-heading,
+  .hero-section .hero-anim-description,
+  .hero-section .hero-anim-buttons,
+  .hero-section .hero-anim-image {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .hero-section .hero-button-pnru,
+  .hero-section .hero-button-secondary {
+    transition: none;
+  }
+
+  .hero-section .hero-button-pnru:hover,
+  .hero-section .hero-button-secondary:hover,
+  .hero-section .hero-button-pnru:active,
+  .hero-section .hero-button-secondary:active {
+    transform: none;
+  }
+}
+
+/* Card stagger variants of .scroll-reveal (left-to-right entrance, or opacity-only for carousels) */
+.scroll-reveal--left {
+  transform: translateX(-20px);
+  transition-duration: 0.5s;
+}
+
+.scroll-reveal--left.is-visible {
+  transform: translateX(0);
+}
+
+@media (max-width: 640px) {
+  .scroll-reveal--left {
+    transform: translateX(-14px);
+  }
+}
+
+.scroll-reveal--fade {
+  transform: none;
+}
+
+.scroll-reveal--fade.is-visible {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-reveal--left,
+  .scroll-reveal--fade {
+    transform: none;
+  }
+}

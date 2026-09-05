@@ -11,64 +11,22 @@ const CompareCourses = () => {
   const MAX_SELECTION = 4
   const MIN_SELECTION = 2
 
-  // ข้อมูล fallback
-  const fallbackCourses = [
-    {
-      id: 1,
-      title: 'วิทยาการคอมพิวเตอร์',
-      title_en: 'Computer Science',
-      description: 'เรียนรู้การพัฒนาซอฟต์แวร์ AI และ Data Science',
-      logo: '/assets/courses/computer.png'
-    },
-    {
-      id: 2,
-      title: 'เทคโนโลยีสารสนเทศ',
-      title_en: 'Information Technology',
-      description: 'การจัดการระบบ เครือข่าย และความปลอดภัย',
-      logo: '/assets/courses/it.png'
-    },
-    {
-      id: 3,
-      title: 'คณิตศาสตร์',
-      title_en: 'Mathematics',
-      description: 'พื้นฐานทางคณิตศาสตร์และการประยุกต์',
-      logo: '/assets/courses/math.png'
-    }
-  ]
-
   useEffect(() => {
+    const fetchCourses = async () => {
+      if (!isConfigured) {
+        setLoading(false)
+        return
+      }
+      const { data } = await supabase
+        .from('courses')
+        .select('id, title, title_en, description, logo')
+        .order('title', { ascending: true })
+
+      setCourses(data || [])
+      setLoading(false)
+    }
     fetchCourses()
   }, [])
-
-  const fetchCourses = async () => {
-    // ถ้ายังไม่ได้ตั้งค่า Supabase ให้ใช้ข้อมูล fallback
-    if (!isConfigured) {
-      setCourses(fallbackCourses)
-      setLoading(false)
-      return
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('courses')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('Error fetching courses:', error)
-        setCourses(fallbackCourses)
-      } else if (data && data.length > 0) {
-        setCourses(data)
-      } else {
-        setCourses(fallbackCourses)
-      }
-    } catch (error) {
-      console.error('Error:', error)
-      setCourses(fallbackCourses)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleToggleCourse = (courseId) => {
     setSelectedCourses(prev => {
@@ -104,17 +62,6 @@ const CompareCourses = () => {
     selectedCourses.includes(course.id)
   )
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-pnru mb-4"></div>
-          <p className="text-gray-600">กำลังโหลดหลักสูตร...</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
@@ -146,7 +93,7 @@ const CompareCourses = () => {
         {/* Main Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Course Selection Panel */}
-          <div className="lg:col-span-9">
+          <div className="order-2 lg:order-1 lg:col-span-9">
             <div className="bg-white rounded-xl border-2 border-blue-100 p-6 lg:p-8">
               <div className="mb-6">
                 <h2 className="text-xl font-bold text-gray-800 mb-2">
@@ -158,6 +105,9 @@ const CompareCourses = () => {
               </div>
 
               {/* Course Grid */}
+              {loading ? (
+                <p className="text-center text-gray-500 py-8">กำลังโหลดหลักสูตร...</p>
+              ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 {courses.map(course => {
                   const isSelected = selectedCourses.includes(course.id)
@@ -246,12 +196,15 @@ const CompareCourses = () => {
                   )
                 })}
               </div>
+              )}
             </div>
           </div>
 
-          {/* Comparison Preview Panel */}
-          <aside className="lg:col-span-3">
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sticky top-28">
+          {/* Comparison Preview Panel — shown first on mobile so the selection/compare
+              button is visible without scrolling past the whole course grid; reverts to
+              its original right-column position on desktop */}
+          <aside className="order-1 lg:order-2 lg:col-span-3">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 lg:sticky lg:top-28">
               {selectedCourses.length === 0 ? (
                 // Empty State
                 <div className="text-center py-8">

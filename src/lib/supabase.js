@@ -23,3 +23,20 @@ if (!isSupabaseConfigured && import.meta.env.DEV) {
     'ดูวิธีการตั้งค่าได้ที่ไฟล์ ADMIN_SETUP.md'
   )
 }
+
+// ดึงชื่อ/อีเมลของผู้ใช้จาก user_id หลายคนพร้อมกัน (ใช้แสดงแทน UUID ของ created_by/updated_by)
+export const fetchProfilesByUserIds = async (userIds) => {
+  const ids = [...new Set((userIds || []).filter(Boolean))]
+  if (ids.length === 0) return {}
+
+  const { data } = await supabase
+    .from('user_profiles')
+    .select('user_id, full_name, email')
+    .in('user_id', ids)
+
+  const map = {}
+  ;(data || []).forEach((profile) => {
+    map[profile.user_id] = profile
+  })
+  return map
+}

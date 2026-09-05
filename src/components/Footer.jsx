@@ -5,28 +5,37 @@ const Footer = () => {
   const navigate = useNavigate()
   const location = useLocation()
 
+  const scrollToAbout = () => {
+    document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })
+  }
+
   const handleAboutClick = (e) => {
     e.preventDefault()
 
     // ถ้าอยู่หน้าแรกอยู่แล้ว scroll ลงไปเลย
     if (location.pathname === '/') {
-      document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })
+      scrollToAbout()
     } else {
       // ถ้าอยู่หน้าอื่น ไปหน้าแรกก่อน แล้วค่อย scroll
       navigate('/')
-      setTimeout(() => {
-        document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })
-      }, 100)
+      // Sections above #about (เช่น SCI Connect) โหลดข่าวแบบ async แล้วขยายความสูง
+      // ทีหลัง เลย scroll ซ้ำสัก 2 วิ ให้ตำแหน่งอัปเดตตามจนกว่า layout จะนิ่ง
+      let attempts = 0
+      const interval = setInterval(() => {
+        scrollToAbout()
+        attempts += 1
+        if (attempts >= 10) clearInterval(interval)
+      }, 200)
     }
   }
 
   return (
     <footer className="bg-gray-900 text-gray-300">
-      <div className="max-w-[1200px] mx-auto px-12 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 py-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-5 sm:gap-6">
           {/* About Section */}
           <div>
-            <h3 className="text-white text-base font-bold mb-2">เกี่ยวกับเรา</h3>
+            <h3 className="text-white text-sm sm:text-base font-bold mb-2">เกี่ยวกับเรา</h3>
             <p className="text-xs mb-2">
               คณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยราชภัฏพระนคร
             </p>
@@ -34,7 +43,7 @@ const Footer = () => {
               <img
                 src="/assets/logo.png"
                 alt="STPNRU Logo"
-                className="h-16 w-auto"
+                className="h-12 sm:h-14 md:h-16 w-auto"
                 onError={(e) => {
                   e.target.style.display = 'none'
                 }}
@@ -44,7 +53,7 @@ const Footer = () => {
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-white text-base font-bold mb-2">ลิงก์ด่วน</h3>
+            <h3 className="text-white text-sm sm:text-base font-bold mb-2">ลิงก์ด่วน</h3>
             <ul className="space-y-1 text-xs">
               <li>
                 <Link to="/" className="hover:text-white transition">
@@ -81,7 +90,7 @@ const Footer = () => {
 
           {/* Contact Info */}
           <div>
-            <h3 className="text-white text-base font-bold mb-2">ติดต่อเรา</h3>
+            <h3 className="text-white text-sm sm:text-base font-bold mb-2">ติดต่อเรา</h3>
             <ul className="space-y-2 text-xs">
               <li className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
@@ -102,10 +111,10 @@ const Footer = () => {
 
           {/* Social Media */}
           <div>
-            <h3 className="text-white text-base font-bold mb-2">ติดตามเรา</h3>
+            <h3 className="text-white text-sm sm:text-base font-bold mb-2">ติดตามเรา</h3>
             <div className="flex gap-3">
               <a
-                href="https://www.facebook.com/SciencePSRU"
+                href="https://www.facebook.com/ScienceTechnologyPNRU"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center hover:bg-pnru transition"

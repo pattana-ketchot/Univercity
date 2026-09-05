@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { User, Users, Venus, Mars, Check } from 'lucide-react'
+import { User, Venus, Mars } from 'lucide-react'
+import { saveFindMajorAnswers } from '../lib/findMajorAnswers'
 
 const FindMajor = () => {
   const navigate = useNavigate()
@@ -54,8 +55,11 @@ const FindMajor = () => {
       return
     }
 
-    // Save data and move to next step
-    console.log('Form data:', { selectedTrack, selectedGender, selectedSubjects })
+    saveFindMajorAnswers({
+      track: selectedTrack,
+      gender: selectedGender,
+      subjects: selectedSubjects
+    })
     navigate('/find-major/step2')
   }
 
@@ -147,19 +151,15 @@ const FindMajor = () => {
                     key={track.id}
                     onClick={() => setSelectedTrack(track.id)}
                     aria-selected={selectedTrack === track.id}
-                    className={`relative px-3 py-2.5 lg:py-3 rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-pnru focus:ring-offset-2 flex items-center justify-center ${
+                    className={`relative px-3 py-2.5 lg:py-3 rounded-lg border-2 transition-all duration-150 ease-out active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-pnru focus:ring-offset-2 flex items-center justify-center ${
                       selectedTrack === track.id
                         ? 'border-pnru bg-green-50'
                         : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >
-                    {/* Checkmark Badge */}
-                    {selectedTrack === track.id && (
-                      <div className="absolute top-2 right-2 w-5 h-5 bg-pnru rounded-full flex items-center justify-center">
-                        <Check className="w-3 h-3 text-white" strokeWidth={3} />
-                      </div>
-                    )}
-                    <p className="font-medium text-sm lg:text-base text-gray-800 whitespace-nowrap">{track.label}</p>
+                    <p className={`font-medium text-sm lg:text-base whitespace-nowrap ${
+                      selectedTrack === track.id ? 'text-pnru' : 'text-gray-800'
+                    }`}>{track.label}</p>
                   </button>
                 ))}
               </div>
@@ -187,18 +187,12 @@ const FindMajor = () => {
                       key={gender.id}
                       onClick={() => setSelectedGender(gender.label)}
                       aria-selected={selectedGender === gender.label}
-                      className={`relative px-4 py-3 lg:py-3.5 rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-pnru focus:ring-offset-2 ${
+                      className={`relative px-4 py-3 lg:py-3.5 rounded-lg border-2 transition-all duration-150 ease-out active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-pnru focus:ring-offset-2 ${
                         selectedGender === gender.label
                           ? 'border-pnru bg-green-50 text-pnru font-medium'
                           : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700'
                       }`}
                     >
-                      {/* Checkmark Badge */}
-                      {selectedGender === gender.label && (
-                        <div className="absolute top-2 right-2 w-5 h-5 bg-pnru rounded-full flex items-center justify-center">
-                          <Check className="w-3 h-3 text-white" strokeWidth={3} />
-                        </div>
-                      )}
                       <div className="flex items-center justify-center gap-2">
                         <IconComponent
                           className={`w-5 h-5 ${
@@ -233,19 +227,13 @@ const FindMajor = () => {
                     key={subject}
                     onClick={() => handleSubjectToggle(subject)}
                     aria-selected={selectedSubjects.includes(subject)}
-                    className={`relative px-3 py-2 lg:py-2.5 rounded-lg border-2 transition-all duration-200 text-sm lg:text-base focus:outline-none focus:ring-2 focus:ring-pnru focus:ring-offset-2 ${
+                    className={`relative px-3 py-2 lg:py-2.5 rounded-lg border-2 transition-all duration-150 ease-out active:scale-[0.98] text-sm lg:text-base focus:outline-none focus:ring-2 focus:ring-pnru focus:ring-offset-2 ${
                       selectedSubjects.includes(subject)
                         ? 'border-pnru bg-green-50 text-pnru font-medium'
                         : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700'
                     }`}
                   >
-                    {/* Checkmark Badge */}
-                    {selectedSubjects.includes(subject) && (
-                      <div className="absolute top-2 right-2 w-5 h-5 bg-pnru rounded-full flex items-center justify-center">
-                        <Check className="w-3 h-3 text-white" strokeWidth={3} />
-                      </div>
-                    )}
-                    <span className="flex items-center justify-center whitespace-nowrap pr-4">
+                    <span className="flex items-center justify-center whitespace-nowrap">
                       {subject}
                     </span>
                   </button>

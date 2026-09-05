@@ -8,9 +8,9 @@ import {
   Utensils,
   Wheat,
   Settings,
-  Lightbulb,
-  Check
+  Lightbulb
 } from 'lucide-react'
+import { saveFindMajorAnswers } from '../lib/findMajorAnswers'
 
 const FindMajorStep2 = () => {
   const navigate = useNavigate()
@@ -36,11 +36,14 @@ const FindMajorStep2 = () => {
     { id: 'innovation', label: 'สุขภาพและการแพทย์', icon: Lightbulb }
   ]
 
-  const handleInterestToggle = (interestId) => {
+  // เก็บ label ที่ผู้ใช้เห็นจริง ไม่ใช่ id ภายใน เพราะ answers.interests ถูกส่งตรงไปเป็น
+  // ข้อความในพรอมต์ของ AI แนะนำสาขา (api/recommend-major.js) — ถ้าเก็บ id จะทำให้ AI
+  // เห็นค่าที่ไม่ตรงกับสิ่งที่ผู้ใช้เลือกจริง
+  const handleInterestToggle = (interestLabel) => {
     setSelectedInterests(prev =>
-      prev.includes(interestId)
-        ? prev.filter(id => id !== interestId)
-        : [...prev, interestId]
+      prev.includes(interestLabel)
+        ? prev.filter(label => label !== interestLabel)
+        : [...prev, interestLabel]
     )
   }
 
@@ -50,7 +53,7 @@ const FindMajorStep2 = () => {
       return
     }
 
-    console.log('Selected interests:', selectedInterests)
+    saveFindMajorAnswers({ interests: selectedInterests })
     navigate('/find-major/step3')
   }
 
@@ -151,30 +154,26 @@ const FindMajorStep2 = () => {
                   return (
                     <button
                       key={interest.id}
-                      onClick={() => handleInterestToggle(interest.id)}
-                      aria-selected={selectedInterests.includes(interest.id)}
-                      className={`relative p-4 lg:p-5 rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-pnru focus:ring-offset-2 ${
-                        selectedInterests.includes(interest.id)
+                      onClick={() => handleInterestToggle(interest.label)}
+                      aria-selected={selectedInterests.includes(interest.label)}
+                      className={`relative flex flex-col p-4 lg:p-5 rounded-lg border-2 transition-all duration-150 ease-out active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-pnru focus:ring-offset-2 ${
+                        selectedInterests.includes(interest.label)
                           ? 'border-pnru bg-green-50'
                           : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                       }`}
                     >
-                      {/* Checkmark Badge */}
-                      {selectedInterests.includes(interest.id) && (
-                        <div className="absolute top-2 right-2 w-5 h-5 bg-pnru rounded-full flex items-center justify-center">
-                          <Check className="w-3 h-3 text-white" strokeWidth={3} />
-                        </div>
-                      )}
-                      <div className="flex flex-col items-center gap-2">
+                      <div className="flex flex-1 flex-col items-center justify-center gap-2 w-full">
                         <IconComponent
                           className={`w-10 h-10 lg:w-12 lg:h-12 ${
-                            selectedInterests.includes(interest.id)
+                            selectedInterests.includes(interest.label)
                               ? 'text-pnru'
                               : 'text-gray-600'
                           }`}
                           strokeWidth={1.5}
                         />
-                        <p className="font-medium text-sm lg:text-base text-gray-800 text-center leading-tight">
+                        <p className={`font-medium text-sm lg:text-base text-center leading-tight ${
+                          selectedInterests.includes(interest.label) ? 'text-pnru' : 'text-gray-800'
+                        }`}>
                           {interest.label}
                         </p>
                       </div>

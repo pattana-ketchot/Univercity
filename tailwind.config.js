@@ -12,6 +12,7 @@ export default {
         cream: '#FAF7F2',
         pnru: '#016a2b',
         black: '#000000',
+        white: '#FFFFFF',
       },
     },
   },

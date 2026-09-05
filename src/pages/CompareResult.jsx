@@ -1,125 +1,87 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Plus, Trash2, X, Star, Check, GraduationCap } from 'lucide-react'
+import { Plus, Trash2, X, Check, GraduationCap, Sparkles, Loader2, AlertTriangle } from 'lucide-react'
 import { supabase, isConfigured } from '../lib/supabase'
 
 const CompareResult = () => {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [selectedCourses, setSelectedCourses] = useState([])
   const [showConfirmClear, setShowConfirmClear] = useState(false)
+  const [selectedCourses, setSelectedCourses] = useState([])
   const [loading, setLoading] = useState(true)
+  const [aiResult, setAiResult] = useState(null)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState('')
 
   useEffect(() => {
-    const courseIds = searchParams.get('courses')
-    if (courseIds) {
-      fetchCoursesById(courseIds.split(','))
-    } else {
-      setLoading(false)
-    }
-  }, [searchParams])
+    const fetchCourses = async () => {
+      const courseIds = searchParams.get('courses')?.split(',').filter(Boolean) || []
 
-  const fetchCoursesById = async (ids) => {
-    setLoading(true)
+      if (!isConfigured || courseIds.length === 0) {
+        setSelectedCourses([])
+        setLoading(false)
+        return
+      }
 
-    // ถ้ายังไม่ได้ตั้งค่า Supabase ให้ใช้ข้อมูล fallback
-    if (!isConfigured) {
-      setSelectedCourses(getFallbackCoursesById(ids))
-      setLoading(false)
-      return
-    }
-
-    try {
-      const { data, error } = await supabase
+      setLoading(true)
+      const { data } = await supabase
         .from('courses')
         .select('*')
-        .in('id', ids)
+        .in('id', courseIds)
 
-      if (error) {
-        console.error('Error fetching courses:', error)
-        setSelectedCourses(getFallbackCoursesById(ids))
-      } else if (data && data.length > 0) {
-        // เพิ่มข้อมูลเพิ่มเติมที่ไม่มีใน database
-        const enrichedCourses = data.map(course => enrichCourseData(course))
-        setSelectedCourses(enrichedCourses)
-      } else {
-        setSelectedCourses(getFallbackCoursesById(ids))
-      }
-    } catch (error) {
-      console.error('Error:', error)
-      setSelectedCourses(getFallbackCoursesById(ids))
-    } finally {
+      const merged = (data || []).map((course) => ({
+        ...course,
+        careers: course.careers || []
+      }))
+
+      // Keep the order the user selected them in
+      const ordered = courseIds
+        .map((id) => merged.find((c) => c.id === id))
+        .filter(Boolean)
+
+      setSelectedCourses(ordered)
+      // การเปลี่ยนชุดสาขาทำให้ผลวิเคราะห์เดิมใช้ไม่ได้
+      setAiResult(null)
+      setAiError('')
       setLoading(false)
     }
-  }
 
-  // เพิ่มข้อมูลเสริมที่ไม่มีใน database
-  const enrichCourseData = (course) => {
-    return {
-      ...course,
-      duration: '4 ปี (8 ภาคการศึกษา)',
-      credits: 'ไม่น้อยกว่า 130 หน่วยกิต',
-      highlights: [
-        'หลักสูตรที่ทันสมัย',
-        'อาจารย์ผู้เชี่ยวชาญ',
-        'ห้องปฏิบัติการครบครัน',
-        'โอกาสฝึกงาน'
-      ],
-      skills: ['วิชาชีพ', 'การสื่อสาร', 'การทำงานเป็นทีม', 'การแก้ปัญหา', 'เทคโนโลยี'],
-      careers: ['นักวิชาชีพ', 'นักวิจัย', 'ผู้ประกอบการ', 'ที่ปรึกษา'],
-      jobOpportunity: { stars: 4, label: 'สูง' },
-      suitability: 'เหมาะกับผู้ที่สนใจและมีความมุ่งมั่นในสาขานี้'
-    }
-  }
+    fetchCourses()
+  }, [searchParams])
 
-  // Fallback data
-  const getFallbackCoursesById = (ids) => {
-    const fallbackCourses = [
-      {
-        id: 1,
-        title: 'วิทยาการคอมพิวเตอร์',
-        title_en: 'Computer Science',
-        description: 'เรียนรู้การพัฒนาซอฟต์แวร์ AI และ Data Science',
-        logo: '/assets/courses/computer.png',
-        duration: '4 ปี (8 ภาคการศึกษา)',
-        credits: 'ไม่น้อยกว่า 129 หน่วยกิต',
-        highlights: ['Programming และ Algorithm', 'AI และ Machine Learning', 'Data Science', 'Software Engineering'],
-        skills: ['Python', 'JavaScript', 'Database', 'Cloud Computing', 'AI/ML'],
-        careers: ['Software Developer', 'Data Scientist', 'AI Engineer', 'System Analyst'],
-        jobOpportunity: { stars: 5, label: 'สูงมาก' },
-        suitability: 'เหมาะกับผู้ที่ชอบแก้ปัญหาและคิดเชิงตรรกะ'
-      },
-      {
-        id: 2,
-        title: 'เทคโนโลยีสารสนเทศ',
-        title_en: 'Information Technology',
-        description: 'การจัดการระบบ เครือข่าย และความปลอดภัย',
-        logo: '/assets/courses/it.png',
-        duration: '4 ปี (8 ภาคการศึกษา)',
-        credits: 'ไม่น้อยกว่า 130 หน่วยกิต',
-        highlights: ['Network และ Security', 'IT Infrastructure', 'Database Management', 'IT Service Management'],
-        skills: ['Network', 'Cybersecurity', 'Cloud', 'System Admin', 'IT Support'],
-        careers: ['Network Engineer', 'Security Analyst', 'IT Manager', 'Cloud Architect'],
-        jobOpportunity: { stars: 5, label: 'สูงมาก' },
-        suitability: 'เหมาะกับผู้ที่สนใจระบบและโครงสร้างพื้นฐานทาง IT'
-      },
-      {
-        id: 3,
-        title: 'คณิตศาสตร์',
-        title_en: 'Mathematics',
-        description: 'พื้นฐานทางคณิตศาสตร์และการประยุกต์',
-        logo: '/assets/courses/math.png',
-        duration: '4 ปี (8 ภาคการศึกษา)',
-        credits: 'ไม่น้อยกว่า 128 หน่วยกิต',
-        highlights: ['Calculus และ Analysis', 'Statistics', 'Applied Mathematics', 'Mathematical Modeling'],
-        skills: ['Analytical Thinking', 'Statistics', 'Data Analysis', 'Problem Solving', 'R/Python'],
-        careers: ['Data Analyst', 'Actuary', 'Math Teacher', 'Research Scientist'],
-        jobOpportunity: { stars: 4, label: 'สูง' },
-        suitability: 'เหมาะกับผู้ที่มีความสามารถทางคณิตศาสตร์และชอบวิเคราะห์'
+  const runAiCompare = async () => {
+    if (selectedCourses.length < 2) return
+
+    setAiLoading(true)
+    setAiError('')
+    setAiResult(null)
+
+    try {
+      const payload = selectedCourses.map((c) => ({
+        id: c.id,
+        title: c.title,
+        title_en: c.title_en,
+        description: c.description,
+        careers: c.careers
+      }))
+
+      const response = await fetch('/api/compare-courses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courses: payload })
+      })
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}))
+        throw new Error(body.error || 'AI request failed')
       }
-    ]
 
-    return fallbackCourses.filter(course => ids.includes(String(course.id)))
+      setAiResult(await response.json())
+    } catch {
+      setAiError('ระบบ AI ไม่สามารถวิเคราะห์การเปรียบเทียบได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง')
+    } finally {
+      setAiLoading(false)
+    }
   }
 
   const handleRemoveCourse = (courseId) => {
@@ -146,17 +108,6 @@ const CompareResult = () => {
 
   const handleAddMore = () => {
     navigate('/compare')
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-pnru mb-4"></div>
-          <p className="text-gray-600">กำลังโหลดข้อมูล...</p>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -192,8 +143,106 @@ const CompareResult = () => {
           </div>
         </div>
 
+        {/* AI Comparison */}
+        {!loading && selectedCourses.length >= 2 && (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 lg:p-6 mb-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-pnru" />
+                <h2 className="text-lg lg:text-xl font-bold text-gray-800">เปรียบเทียบด้วย AI</h2>
+              </div>
+              {!aiLoading && (
+                <button
+                  onClick={runAiCompare}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-pnru text-white rounded-lg font-medium hover:bg-opacity-90 transition-colors text-sm"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  {aiResult ? 'วิเคราะห์อีกครั้ง' : 'ให้ AI ช่วยวิเคราะห์'}
+                </button>
+              )}
+            </div>
+            <p className="mt-1 text-sm text-gray-500">
+              ให้ AI สรุปจุดเด่น ข้อควรพิจารณา และความเหมาะสมของแต่ละสาขา จากข้อมูลหลักสูตรที่มีในระบบ
+            </p>
+
+            {aiLoading && (
+              <div className="mt-5 flex flex-col items-center justify-center text-center py-6">
+                <Loader2 className="w-8 h-8 text-pnru animate-spin mb-3" />
+                <p className="text-sm text-gray-600">AI กำลังวิเคราะห์การเปรียบเทียบ...</p>
+              </div>
+            )}
+
+            {!aiLoading && aiError && (
+              <div className="mt-5 flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3">
+                <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                <span>{aiError}</span>
+              </div>
+            )}
+
+            {!aiLoading && aiResult && (
+              <div className="mt-5 space-y-5">
+                {aiResult.summary && (
+                  <p className="text-sm lg:text-base text-gray-700 leading-relaxed">{aiResult.summary}</p>
+                )}
+
+                {Array.isArray(aiResult.courses) && aiResult.courses.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {aiResult.courses.map((item) => {
+                      const course = selectedCourses.find((c) => c.id === item.courseId)
+                      return (
+                        <div key={item.courseId} className="rounded-lg border border-gray-200 p-4">
+                          <h3 className="font-bold text-pnru">{course?.title || 'สาขา'}</h3>
+                          {item.bestFor && (
+                            <p className="mt-1 text-sm text-gray-600">
+                              <span className="font-medium text-gray-800">เหมาะกับ:</span> {item.bestFor}
+                            </p>
+                          )}
+                          {Array.isArray(item.pros) && item.pros.length > 0 && (
+                            <ul className="mt-3 space-y-1.5">
+                              {item.pros.map((p, idx) => (
+                                <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
+                                  <Check className="w-4 h-4 text-pnru flex-shrink-0 mt-0.5" />
+                                  <span>{p}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                          {Array.isArray(item.cons) && item.cons.length > 0 && (
+                            <ul className="mt-2 space-y-1.5">
+                              {item.cons.map((c, idx) => (
+                                <li key={idx} className="flex items-start gap-2 text-sm text-gray-500">
+                                  <span className="text-amber-500 font-bold leading-none mt-0.5">!</span>
+                                  <span>{c}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {aiResult.verdict && (
+                  <div className="bg-[#E8F5F1] border border-pnru/20 rounded-lg p-4">
+                    <p className="text-sm lg:text-base text-pnru font-medium leading-relaxed">{aiResult.verdict}</p>
+                  </div>
+                )}
+
+                <p className="text-xs text-gray-400">
+                  สร้างโดย AI จากข้อมูลหลักสูตรในระบบ • โปรดใช้วิจารณญาณประกอบการตัดสินใจ
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Comparison Table */}
-        {selectedCourses.length >= 2 ? (
+        {loading ? (
+          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-500">
+            กำลังโหลดข้อมูล...
+          </div>
+        ) : selectedCourses.length >= 2 ? (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full">
@@ -245,30 +294,6 @@ const CompareResult = () => {
                 </thead>
 
                 <tbody>
-                  {/* Row: Duration */}
-                  <tr className="border-b border-gray-200">
-                    <td className="bg-gray-50 px-4 py-4 text-sm font-semibold text-gray-700 border-r border-gray-200 sticky left-0 z-10">
-                      ระยะเวลาการศึกษา
-                    </td>
-                    {selectedCourses.map(course => (
-                      <td key={course.id} className="px-4 py-4 text-sm text-gray-600 text-center">
-                        {course.duration}
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Row: Credits */}
-                  <tr className="border-b border-gray-200 bg-gray-50/50">
-                    <td className="bg-gray-50 px-4 py-4 text-sm font-semibold text-gray-700 border-r border-gray-200 sticky left-0 z-10">
-                      หน่วยกิตรวม
-                    </td>
-                    {selectedCourses.map(course => (
-                      <td key={course.id} className="px-4 py-4 text-sm text-gray-600 text-center">
-                        {course.credits}
-                      </td>
-                    ))}
-                  </tr>
-
                   {/* Row: Description */}
                   <tr className="border-b border-gray-200">
                     <td className="bg-gray-50 px-4 py-4 text-sm font-semibold text-gray-700 border-r border-gray-200 sticky left-0 z-10">
@@ -281,52 +306,8 @@ const CompareResult = () => {
                     ))}
                   </tr>
 
-                  {/* Row: Highlights */}
-                  <tr className="border-b border-gray-200 bg-gray-50/50">
-                    <td className="bg-gray-50 px-4 py-4 text-sm font-semibold text-gray-700 border-r border-gray-200 sticky left-0 z-10">
-                      วิชาเด่น / เน้นเรียนอะไร
-                    </td>
-                    {selectedCourses.map(course => (
-                      <td key={course.id} className="px-4 py-4">
-                        <ul className="space-y-1">
-                          {course.highlights.map((item, idx) => (
-                            <li key={idx} className="text-sm text-gray-600 flex items-start gap-2">
-                              <span className="text-pnru mt-1">•</span>
-                              <span>{item}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Row: Skills */}
-                  <tr className="border-b border-gray-200">
-                    <td className="bg-gray-50 px-4 py-4 text-sm font-semibold text-gray-700 border-r border-gray-200 sticky left-0 z-10">
-                      ทักษะที่ได้รับ
-                    </td>
-                    {selectedCourses.map((course, index) => (
-                      <td key={course.id} className="px-4 py-4">
-                        <div className="flex flex-wrap gap-2">
-                          {course.skills.map((skill, idx) => (
-                            <span
-                              key={idx}
-                              className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                index % 2 === 0
-                                  ? 'bg-green-100 text-green-700'
-                                  : 'bg-blue-100 text-blue-700'
-                              }`}
-                            >
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                    ))}
-                  </tr>
-
                   {/* Row: Careers */}
-                  <tr className="border-b border-gray-200 bg-gray-50/50">
+                  <tr>
                     <td className="bg-gray-50 px-4 py-4 text-sm font-semibold text-gray-700 border-r border-gray-200 sticky left-0 z-10">
                       อาชีพที่สามารถทำได้
                     </td>
@@ -340,46 +321,6 @@ const CompareResult = () => {
                             </li>
                           ))}
                         </ul>
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Row: Job Opportunity */}
-                  <tr className="border-b border-gray-200">
-                    <td className="bg-gray-50 px-4 py-4 text-sm font-semibold text-gray-700 border-r border-gray-200 sticky left-0 z-10">
-                      โอกาสในการทำงาน
-                    </td>
-                    {selectedCourses.map(course => (
-                      <td key={course.id} className="px-4 py-4">
-                        <div className="flex flex-col items-center gap-1">
-                          <div className="flex gap-1">
-                            {[...Array(5)].map((_, idx) => (
-                              <Star
-                                key={idx}
-                                className={`w-5 h-5 ${
-                                  idx < course.jobOpportunity.stars
-                                    ? 'text-yellow-500 fill-yellow-500'
-                                    : 'text-gray-300'
-                                }`}
-                              />
-                            ))}
-                          </div>
-                          <span className="text-sm font-medium text-gray-700">
-                            {course.jobOpportunity.label}
-                          </span>
-                        </div>
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Row: Suitability */}
-                  <tr>
-                    <td className="bg-gray-50 px-4 py-4 text-sm font-semibold text-gray-700 border-r border-gray-200 sticky left-0 z-10">
-                      ความเหมาะสมกับคุณ
-                    </td>
-                    {selectedCourses.map(course => (
-                      <td key={course.id} className="px-4 py-4 text-sm text-gray-600">
-                        {course.suitability}
                       </td>
                     ))}
                   </tr>

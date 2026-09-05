@@ -8,9 +8,9 @@ import {
   BookOpen,
   Wrench,
   LineChart,
-  MessageSquare,
-  Check
+  MessageSquare
 } from 'lucide-react'
+import { saveFindMajorAnswers } from '../lib/findMajorAnswers'
 
 const FindMajorStep3 = () => {
   const navigate = useNavigate()
@@ -36,11 +36,13 @@ const FindMajorStep3 = () => {
     { id: 'communication', label: 'การพูด นำเสนอข้อมูลต่อหน้าคนหมู่มาก', icon: MessageSquare }
   ]
 
-  const handleSkillToggle = (skillId) => {
+  // เก็บ label ที่ผู้ใช้เห็นจริง ไม่ใช่ id ภายใน เพราะ answers.skills ถูกส่งตรงไปเป็น
+  // ข้อความในพรอมต์ของ AI แนะนำสาขา (api/recommend-major.js)
+  const handleSkillToggle = (skillLabel) => {
     setSelectedSkills(prev =>
-      prev.includes(skillId)
-        ? prev.filter(id => id !== skillId)
-        : [...prev, skillId]
+      prev.includes(skillLabel)
+        ? prev.filter(label => label !== skillLabel)
+        : [...prev, skillLabel]
     )
   }
 
@@ -50,7 +52,7 @@ const FindMajorStep3 = () => {
       return
     }
 
-    console.log('Selected skills:', selectedSkills)
+    saveFindMajorAnswers({ skills: selectedSkills })
     navigate('/find-major/step4')
   }
 
@@ -151,30 +153,26 @@ const FindMajorStep3 = () => {
                   return (
                     <button
                       key={skill.id}
-                      onClick={() => handleSkillToggle(skill.id)}
-                      aria-selected={selectedSkills.includes(skill.id)}
-                      className={`relative p-4 lg:p-5 rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-pnru focus:ring-offset-2 ${
-                        selectedSkills.includes(skill.id)
+                      onClick={() => handleSkillToggle(skill.label)}
+                      aria-selected={selectedSkills.includes(skill.label)}
+                      className={`relative flex flex-col p-4 lg:p-5 rounded-lg border-2 transition-all duration-150 ease-out active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-pnru focus:ring-offset-2 ${
+                        selectedSkills.includes(skill.label)
                           ? 'border-pnru bg-green-50'
                           : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                       }`}
                     >
-                      {/* Checkmark Badge */}
-                      {selectedSkills.includes(skill.id) && (
-                        <div className="absolute top-2 right-2 w-5 h-5 bg-pnru rounded-full flex items-center justify-center">
-                          <Check className="w-3 h-3 text-white" strokeWidth={3} />
-                        </div>
-                      )}
-                      <div className="flex flex-col items-center gap-2">
+                      <div className="flex flex-1 flex-col items-center justify-center gap-2 w-full">
                         <IconComponent
                           className={`w-10 h-10 lg:w-12 lg:h-12 ${
-                            selectedSkills.includes(skill.id)
+                            selectedSkills.includes(skill.label)
                               ? 'text-pnru'
                               : 'text-gray-600'
                           }`}
                           strokeWidth={1.5}
                         />
-                        <p className="font-medium text-sm lg:text-base text-gray-800 text-center leading-tight">
+                        <p className={`font-medium text-sm lg:text-base text-center leading-tight ${
+                          selectedSkills.includes(skill.label) ? 'text-pnru' : 'text-gray-800'
+                        }`}>
                           {skill.label}
                         </p>
                       </div>

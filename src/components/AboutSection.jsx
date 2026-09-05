@@ -1,4 +1,5 @@
 import { Users, Compass, Database, Lightbulb, CheckCircle, ClipboardCheck, Sparkles, FileText, MessageCircle } from 'lucide-react'
+import Reveal from './Reveal'
 
 const AboutSection = () => {
   const infoCards = [
@@ -62,51 +63,54 @@ const AboutSection = () => {
   ]
 
   return (
-    <section id="about" className="py-16 lg:py-20 bg-white">
-      <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+    <section id="about" className="py-10 sm:py-12 md:py-16 lg:py-20 bg-white">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-5 md:px-6 lg:px-12">
         {/* Header */}
-        <div className="text-center mb-12 lg:mb-16">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 border border-pnru/20 rounded-full mb-4">
-            <span className="text-sm font-medium text-pnru">เกี่ยวกับเรา</span>
-          </div>
+        <div className="text-center mb-8 sm:mb-10 md:mb-12 lg:mb-16">
+          {/* Badge + Title */}
+          <Reveal as="div" className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-green-50 border border-pnru/20 rounded-full mb-3 sm:mb-4">
+            <span className="text-xs sm:text-sm font-medium text-pnru">เกี่ยวกับเรา</span>
+          </Reveal>
 
           {/* Title */}
-          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+          <Reveal as="h2" className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">
             About SCI Advisor
-          </h2>
+          </Reveal>
 
           {/* Description */}
-          <p className="text-base lg:text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed mb-3">
+          <Reveal as="p" delay={80} className="text-sm sm:text-base lg:text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed mb-3">
             ผู้ช่วยแนะนำสาขา หลักสูตร และอาชีพ สำหรับนักศึกษาคณะวิทยาศาสตร์และเทคโนโลยี<br />
             มหาวิทยาลัยราชภัฏพระนคร
-          </p>
+          </Reveal>
 
           {/* Decorative Divider */}
           <div className="flex items-center justify-center gap-3">
-            <div className="w-[150px] h-1 bg-pnru rounded-full"></div>
+            <div className="w-[100px] sm:w-[130px] lg:w-[150px] h-1 bg-pnru rounded-full"></div>
             <div className="w-2 h-2 bg-pnru rounded-full"></div>
           </div>
         </div>
 
-        {/* Info Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16 lg:mb-16">
-          {infoCards.map((card) => {
+        {/* Info Cards Grid — cards stagger in left to right, index order preserved */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 md:gap-6 mb-10 sm:mb-12 md:mb-16">
+          {infoCards.map((card, index) => {
             const IconComponent = card.icon
             return (
-              <div
+              <Reveal
+                as="div"
                 key={card.id}
-                className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow"
+                direction="left"
+                delay={index * 80}
+                className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 md:p-6 shadow-sm hover:shadow-md transition-shadow"
               >
                 {/* Icon and Title - Same Row */}
-                <div className="flex items-center gap-3 mb-4">
+                <div className="flex items-center gap-3 mb-3 sm:mb-4">
                   {/* Icon */}
-                  <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center flex-shrink-0">
-                    <IconComponent className="w-6 h-6 text-pnru" strokeWidth={2} />
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-50 rounded-full flex items-center justify-center flex-shrink-0">
+                    <IconComponent className="w-5 h-5 sm:w-6 sm:h-6 text-pnru" strokeWidth={2} />
                   </div>
 
                   {/* Title */}
-                  <h3 className="text-lg font-bold text-gray-900">
+                  <h3 className="text-base sm:text-lg font-bold text-gray-900">
                     {card.title}
                   </h3>
                 </div>
@@ -129,36 +133,36 @@ const AboutSection = () => {
                     ))}
                   </ul>
                 )}
-              </div>
+              </Reveal>
             )
           })}
         </div>
 
         {/* How it Works Section */}
-        <div className="text-center mb-10">
-          <h3 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-3">
+        <div className="text-center mb-6 sm:mb-8 md:mb-10">
+          <Reveal as="h3" className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2 sm:mb-3">
             ทำงานอย่างไร?
-          </h3>
-          <p className="text-base text-gray-600">
+          </Reveal>
+          <Reveal as="p" delay={80} className="text-sm sm:text-base text-gray-600">
             4 ขั้นตอนง่าย ๆ เพื่อค้นหาสาขาที่เหมาะกับคุณ
-          </p>
+          </Reveal>
         </div>
 
-        {/* Steps Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 max-w-6xl mx-auto">
-          {steps.map((step) => {
+        {/* Steps Grid — cards stagger in left to right, index order preserved */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 md:gap-6 lg:gap-8 max-w-6xl mx-auto">
+          {steps.map((step, index) => {
             const IconComponent = step.icon
             return (
-              <div key={step.id} className="flex items-start gap-4">
+              <Reveal as="div" key={step.id} direction="left" delay={index * 80} className="flex items-start gap-3 sm:gap-4">
                 {/* Icon Circle */}
-                <div className="w-[62px] h-[62px] bg-green-50 rounded-full flex items-center justify-center flex-shrink-0">
-                  <IconComponent className="w-7 h-7 text-pnru" strokeWidth={2} />
+                <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-[62px] md:h-[62px] bg-green-50 rounded-full flex items-center justify-center flex-shrink-0">
+                  <IconComponent className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-pnru" strokeWidth={2} />
                 </div>
 
                 {/* Text Block */}
                 <div className="flex-1">
                   {/* Title */}
-                  <h4 className="text-base font-bold text-black mb-1">
+                  <h4 className="text-sm sm:text-base font-bold text-black mb-1">
                     {step.title}
                   </h4>
 
@@ -167,7 +171,7 @@ const AboutSection = () => {
                     {step.description}
                   </p>
                 </div>
-              </div>
+              </Reveal>
             )
           })}
         </div>
