@@ -63,11 +63,16 @@ const ChatAdvisor = () => {
       }
 
       // ข้อมูลอ้างอิง (RAG) มากับ header แบบ base64 เพราะ body เป็น plain text stream
-      // ล้วนๆ อยู่แล้ว ใส่ไว้ใน JSON ปนกับ body ไม่ได้
+      // ล้วนๆ อยู่แล้ว ใส่ไว้ใน JSON ปนกับ body ไม่ได้ — atob() คืนค่าเป็น binary
+      // string ทีละไบต์ ต้องแปลงเป็น byte array แล้วถอดด้วย TextDecoder('utf-8')
+      // อีกที ไม่งั้นข้อความภาษาไทย (multi-byte) จะกลายเป็นตัวอักษรอ่านไม่ออก
       let sources = []
       try {
         const raw = response.headers.get('X-RAG-Sources')
-        if (raw) sources = JSON.parse(atob(raw))
+        if (raw) {
+          const bytes = Uint8Array.from(atob(raw), (c) => c.charCodeAt(0))
+          sources = JSON.parse(new TextDecoder('utf-8').decode(bytes))
+        }
       } catch {
         sources = []
       }
