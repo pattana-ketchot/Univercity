@@ -24,6 +24,23 @@ const firstText = (...vals) => {
   return 'ไม่ระบุ'
 }
 
+/**
+ * รวมข้อมูลจากเอกสารหลักสูตรเข้ากับข้อมูลที่ผู้ดูแลระบบกรอกไว้
+ *
+ * ของที่คนกรอกเองมาก่อนเสมอ เพราะเป็นข้อมูลที่ตั้งใจใส่และแก้ได้จากหน้าแอดมิน
+ * ส่วนช่องที่ยังว่าง (ยังไม่มีใครกรอก) จึงเติมด้วยค่าที่สกัดจากเอกสาร
+ * ไม่เขียนทับของเดิมในทุกกรณี
+ */
+const withFacts = (detail, facts) => {
+  const merged = { ...detail }
+  for (const [key, value] of Object.entries(facts || {})) {
+    const current = merged[key]
+    const isEmpty = Array.isArray(current) ? current.length === 0 : !hasText(current)
+    if (isEmpty) merged[key] = value
+  }
+  return merged
+}
+
 const SectionCard = ({ icon: Icon, title, children, bare = false }) => (
   <section className={bare ? '' : 'rounded-lg border border-gray-200 bg-white p-5 lg:p-6'}>
     <div className="mb-4 flex items-center gap-2.5">
@@ -49,6 +66,7 @@ const CourseDetail = () => {
   const { id } = useParams()
   const [activeTab, setActiveTab] = useState('details')
   const [course, setCourse] = useState(null)
+  const [facts, setFacts] = useState({})
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
@@ -56,6 +74,7 @@ const CourseDetail = () => {
     const fetchCourse = async () => {
       setLoading(true)
       setNotFound(false)
+      setFacts({})
 
       if (!isConfigured) {
         setLoading(false)
@@ -73,6 +92,21 @@ const CourseDetail = () => {
       setCourse(data)
       setActiveTab('details')
       setLoading(false)
+
+      // เติมช่องที่ฐานข้อมูลของหน้าเว็บยังไม่มีคนกรอก ด้วยข้อมูลจากเอกสารหลักสูตร
+      //
+      // ช่องอย่างหน่วยกิต ภาษาที่ใช้สอน ค่าเทอม และรายชื่ออาจารย์ ถูกสกัดจากเอกสาร
+      // มคอ.2 และประกาศของคณะไว้แล้วฝั่งหลังบ้าน ถ้าไม่ดึงมาหน้านี้จะขึ้นว่า
+      // "ไม่ระบุ" ทุกช่องทั้งที่มีข้อมูลอยู่
+      //
+      // จับคู่ด้วยชื่อหลักสูตร ไม่ใช่รหัส เพราะฐานข้อมูลสองฝั่งใช้รหัสคนละชุดกัน
+      // ล้มเหลวเมื่อไรก็แค่ไม่ได้ข้อมูลเสริม หน้ายังแสดงค่าจากฐานข้อมูลเดิมตามปกติ
+      try {
+        const res = await fetch(`/api/course-facts?title=${encodeURIComponent(data.title)}`)
+        if (res.ok) setFacts(await res.json())
+      } catch {
+        /* ไม่มีข้อมูลเสริมก็แสดงเท่าที่มี */
+      }
     }
 
     fetchCourse()
@@ -94,9 +128,12 @@ const CourseDetail = () => {
     )
   }
 
-  const detail = course.detail || {}
+  // ค่าที่ผู้ดูแลระบบกรอกไว้มาก่อนเสมอ ส่วนช่องที่ยังว่างจึงเติมด้วยข้อมูลจากเอกสารหลักสูตร
+  const detail = withFacts(course.detail || {}, facts)
   const highlights = Array.isArray(detail.highlights) ? detail.highlights : []
-  const careers = Array.isArray(course.careers) ? course.careers : []
+  const careers = Array.isArray(course.careers) && course.careers.length > 0
+    ? course.careers
+    : (Array.isArray(facts.careers) ? facts.careers : [])
   const faculty = Array.isArray(detail.faculty) ? detail.faculty : []
   const documents = Array.isArray(detail.documents) ? detail.documents : []
   const infoList = Array.isArray(detail.important_info) ? detail.important_info : []
