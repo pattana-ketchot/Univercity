@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import AnswerActions from '../components/AnswerActions'
 import {
   Briefcase,
   Bot,
@@ -62,19 +62,33 @@ const ChatAdvisor = () => {
         throw new Error(errText || 'AI request failed')
       }
 
-      // ข้อมูลอ้างอิง (RAG) มากับ header แบบ base64 เพราะ body เป็น plain text stream
-      // ล้วนๆ อยู่แล้ว ใส่ไว้ใน JSON ปนกับ body ไม่ได้ — atob() คืนค่าเป็น binary
-      // string ทีละไบต์ ต้องแปลงเป็น byte array แล้วถอดด้วย TextDecoder('utf-8')
-      // อีกที ไม่งั้นข้อความภาษาไทย (multi-byte) จะกลายเป็นตัวอักษรอ่านไม่ออก
-      let sources = []
-      try {
-        const raw = response.headers.get('X-RAG-Sources')
-        if (raw) {
+      // ที่มาของคำตอบมากับ header เพราะ body เป็น plain text stream ล้วนๆ อยู่แล้ว
+      // ใส่ปนใน body ไม่ได้
+      //
+      // เดิมโค้ดตรงนี้อ่าน header ชื่อ X-RAG-Sources ซึ่ง FastAPI ไม่เคยส่งเลย
+      // (เป็น header ของอีกระบบที่ไม่ได้ใช้กับ /api/chat) ชิป "อ้างอิงจาก:" จึงไม่เคยขึ้น
+      // ตอนนี้อ่านจาก header ที่หลังบ้านส่งมาจริง
+      //
+      // ค่าที่เป็นภาษาไทยถูกหุ้ม base64 มา เพราะ header ส่งข้ามได้เฉพาะ latin-1
+      // atob() คืนค่าเป็น binary string ทีละไบต์ ต้องแปลงเป็น byte array แล้วถอดด้วย
+      // TextDecoder('utf-8') อีกที ไม่งั้นภาษาไทย (multi-byte) จะอ่านไม่ออก
+      const decodeHeader = (name) => {
+        try {
+          const raw = response.headers.get(name)
+          if (!raw) return ''
           const bytes = Uint8Array.from(atob(raw), (c) => c.charCodeAt(0))
-          sources = JSON.parse(new TextDecoder('utf-8').decode(bytes))
+          return new TextDecoder('utf-8').decode(bytes)
+        } catch {
+          return ''
         }
-      } catch {
-        sources = []
+      }
+
+      const pageRaw = Number.parseInt(response.headers.get('X-Source-Page') || '', 10)
+      const source = {
+        documentId: response.headers.get('X-Source-Document') || '',
+        page: Number.isInteger(pageRaw) && pageRaw > 0 ? pageRaw : null,
+        title: decodeHeader('X-Source-Title'),
+        programme: decodeHeader('X-Source-Programme')
       }
 
       const reader = response.body.getReader()
@@ -89,7 +103,7 @@ const ChatAdvisor = () => {
         if (!started) {
           started = true
           setIsLoading(false)
-          setMessages(prev => [...prev, { role: 'assistant', content, sources, timestamp: new Date() }])
+          setMessages(prev => [...prev, { role: 'assistant', content, source, timestamp: new Date() }])
         } else {
           setMessages(prev => {
             const updated = [...prev]
@@ -198,7 +212,8 @@ const ChatAdvisor = () => {
                       key={index}
                       className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
-                      {/* บนมือถือให้ฟองข้อความกว้างขึ้น จอ sm ขึ้นไปใช้ 80% เท่าเดิมตามดีไซน์ */}
+                      {/* บนมือถือให้ฟองข้อความกว้างขึ้น ไม่งั้นปุ่ม "ข้อมูลเพิ่มเติม" เหลือกว้างแค่ ~160px
+                          จอ sm ขึ้นไปใช้ 80% เท่าเดิมตามดีไซน์ */}
                       <div className={`flex gap-3 max-w-[92%] sm:max-w-[80%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                         {/* Avatar */}
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
@@ -219,26 +234,7 @@ const ChatAdvisor = () => {
                         }`}>
                           <div className="text-sm whitespace-pre-wrap">{msg.content}</div>
 
-                          {msg.role === 'assistant' && msg.sources?.length > 0 && (
-                            <div className="mt-2 pt-2 border-t border-gray-200 flex flex-wrap items-center gap-1.5">
-                              <span className="text-xs text-gray-400">อ้างอิงจาก:</span>
-                              {msg.sources.map((s) => (
-                                s.source_type === 'major' ? (
-                                  <Link
-                                    key={`${s.source_type}-${s.source_id}`}
-                                    to={`/courses/${s.source_id}`}
-                                    className="text-xs text-pnru underline hover:no-underline"
-                                  >
-                                    {s.title}
-                                  </Link>
-                                ) : (
-                                  <span key={`${s.source_type}-${s.source_id}`} className="text-xs text-gray-500">
-                                    {s.title}
-                                  </span>
-                                )
-                              ))}
-                            </div>
-                          )}
+                          {msg.role === 'assistant' && <AnswerActions source={msg.source} />}
                         </div>
                       </div>
                     </div>
@@ -268,6 +264,8 @@ const ChatAdvisor = () => {
             {/* Chat Composer */}
             <div className="p-2.5 sm:p-4 border-t border-gray-200 bg-white">
               <div className="flex items-center gap-1.5 sm:gap-2">
+                {/* แนบไฟล์/อัดเสียง ยังเป็นปุ่มเปล่ารอฟีเจอร์ — ซ่อนบนมือถือเพื่อคืนความกว้างให้ช่องพิมพ์
+                    ถ้าโชว์ทั้งสองปุ่มที่ขนาดนิ้ว 44px ช่องพิมพ์บนจอ 360px จะเหลือแค่ ~162px */}
                 <button
                   disabled
                   className="hidden sm:flex w-11 h-11 items-center justify-center text-gray-300 cursor-not-allowed transition-colors flex-shrink-0"
