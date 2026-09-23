@@ -16,7 +16,7 @@ const PasswordInput = ({ label = 'รหัสผ่าน', icon = Lock, ...pro
           type="button"
           onClick={() => setShow((v) => !v)}
           aria-label={show ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
-          className="p-2 text-gray-400 hover:text-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pnru/30"
+          className="w-11 h-11 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pnru/30"
           tabIndex={-1}
         >
           {show ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}

@@ -34,7 +34,7 @@ const SciConnectCard = ({ item, index = 0 }) => {
         <div className="flex items-center justify-between">
           <span className="text-gray-500 text-xs">{item.published_date}</span>
           {item.slug && (
-            <Link to={`/sci-connect/${item.slug}`} className="text-pnru font-medium text-sm hover:underline">
+            <Link to={`/sci-connect/${item.slug}`} className="text-pnru font-medium text-sm hover:underline inline-flex min-h-[44px] items-center">
               อ่านต่อ →
             </Link>
           )}

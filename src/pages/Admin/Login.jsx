@@ -137,7 +137,7 @@ const AdminLogin = () => {
         footer={
           <>
             ยังไม่มีบัญชีผู้ดูแลระบบ?{' '}
-            <Link to="/admin/register" className="font-medium text-pnru hover:underline">
+            <Link to="/admin/register" className="inline-flex min-h-[44px] items-center font-medium text-pnru hover:underline">
               สร้างบัญชี
             </Link>
           </>
@@ -179,7 +179,8 @@ const AdminLogin = () => {
           />
 
           <div className="flex items-center justify-between text-sm">
-            <label className="flex items-center gap-2 text-gray-600 cursor-pointer select-none">
+            {/* min-h 44px ให้ทั้งสองอันกดถูกด้วยนิ้ว ตัวช่องติ๊กกับตัวอักษรยังเท่าเดิม */}
+            <label className="flex min-h-[44px] items-center gap-2 text-gray-600 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={remember}
@@ -191,7 +192,7 @@ const AdminLogin = () => {
             <button
               type="button"
               onClick={handleForgotPassword}
-              className="font-medium text-pnru hover:underline"
+              className="min-h-[44px] px-1 font-medium text-pnru hover:underline"
             >
               ลืมรหัสผ่าน?
             </button>

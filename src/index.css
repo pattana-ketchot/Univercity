@@ -24,6 +24,80 @@ body {
   scrollbar-width: none;
 }
 
+/* Safari บน iOS ซูมหน้าเว็บเข้าเองเมื่อแตะช่องกรอกที่ตัวอักษรเล็กกว่า 16px และไม่ซูมกลับให้
+   บังคับขนาดขั้นต่ำ 16px เฉพาะจอมือถือ จอ sm ขึ้นไปยังใช้ขนาดตามดีไซน์เดิม
+   ต้องใช้ !important เพราะ utility อย่าง text-sm ของ Tailwind มี specificity สูงกว่า element selector */
+@media (max-width: 639.98px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  select,
+  textarea {
+    font-size: 16px !important;
+    /* utility อย่าง text-sm ตั้ง line-height มาที่ 20px ด้วย ถ้าไม่คุมตรงนี้ ช่องกรอกจะเตี้ยกว่าขนาดนิ้ว */
+    line-height: 1.5 !important;
+  }
+}
+
+/* ล็อกไม่ให้หน้าข้างหลังเลื่อนตอนเปิดเมนูมือถือ */
+body.nav-open {
+  overflow: hidden;
+}
+
+/* ปุ่มแชทลอย — ยกให้พ้นแถบ home indicator ของ iPhone */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .chat-fab {
+    bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  @media (min-width: 640px) {
+    .chat-fab {
+      bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+    }
+  }
+}
+
+/* ความสูงกล่องแชท — 100vh บนมือถือไม่ยุบตามแถบ URL และไม่ยุบตอนคีย์บอร์ดเด้งขึ้น
+   ทำให้แถบพิมพ์ถูกดันหลุดจอ ใช้ 100dvh แทนถ้าเบราว์เซอร์รองรับ และเหลือ 100vh ไว้เป็นทางถอย */
+.chat-shell {
+  height: calc(100vh - 120px);
+}
+
+@supports (height: 100dvh) {
+  .chat-shell {
+    height: calc(100dvh - 120px);
+  }
+}
+
+@media (min-width: 640px) {
+  .chat-shell {
+    height: calc(100vh - 180px);
+  }
+
+  @supports (height: 100dvh) {
+    .chat-shell {
+      height: calc(100dvh - 180px);
+    }
+  }
+}
+
+/* แถบเลื่อนแนวนอนที่ต้องการให้ผู้ใช้เห็นว่าเลื่อนได้ (ต่างจาก .course-scroll ที่ซ่อน scrollbar) */
+.tab-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(15, 23, 42, 0.22) transparent;
+}
+
+.tab-scroll::-webkit-scrollbar {
+  height: 3px;
+}
+
+.tab-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tab-scroll::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.22);
+  border-radius: 9999px;
+}
+
 /* Hero Section entrance animation — scoped to .hero-section only */
 .hero-section {
   --hero-anim-distance: 20px;

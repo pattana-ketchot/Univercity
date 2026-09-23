@@ -31,7 +31,8 @@ const Footer = () => {
 
   return (
     <footer className="bg-gray-900 text-gray-300">
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 py-6">
+      {/* pb เยอะขึ้นบนมือถือ เผื่อที่ให้ปุ่มแชทลอยมุมขวาล่าง ไม่ให้ทับบรรทัดสุดท้ายตอนเลื่อนสุดหน้า */}
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 pt-6 pb-24 sm:pb-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-5 sm:gap-6">
           {/* About Section */}
           <div>
@@ -54,34 +55,34 @@ const Footer = () => {
           {/* Quick Links */}
           <div>
             <h3 className="text-white text-sm sm:text-base font-bold mb-2">ลิงก์ด่วน</h3>
-            <ul className="space-y-1 text-xs">
+            <ul className="text-xs">
               <li>
-                <Link to="/" className="hover:text-white transition">
+                <Link to="/" className="inline-block py-3 hover:text-white transition">
                   หน้าแรก
                 </Link>
               </li>
               <li>
-                <Link to="/find-major" className="hover:text-white transition">
+                <Link to="/find-major" className="inline-block py-3 hover:text-white transition">
                   ค้นหาสาขาที่เหมาะกับฉัน
                 </Link>
               </li>
               <li>
-                <Link to="/courses" className="hover:text-white transition">
+                <Link to="/courses" className="inline-block py-3 hover:text-white transition">
                   หลักสูตรทั้งหมด
                 </Link>
               </li>
               <li>
-                <Link to="/compare" className="hover:text-white transition">
+                <Link to="/compare" className="inline-block py-3 hover:text-white transition">
                   เปรียบเทียบสาขา
                 </Link>
               </li>
               <li>
-                <Link to="/careers" className="hover:text-white transition">
+                <Link to="/careers" className="inline-block py-3 hover:text-white transition">
                   อาชีพหลังจบ
                 </Link>
               </li>
               <li>
-                <a href="#about" onClick={handleAboutClick} className="hover:text-white transition">
+                <a href="#about" onClick={handleAboutClick} className="inline-block py-3 hover:text-white transition">
                   เกี่ยวกับเรา
                 </a>
               </li>

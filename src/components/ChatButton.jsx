@@ -11,7 +11,7 @@ const ChatButton = () => {
     <Link
       to="/chat"
       aria-label="แชทกับ Sci Advisor"
-      className="fixed right-6 bottom-6 z-50 flex h-[52px] w-[52px] sm:h-[60px] sm:w-[60px] items-center justify-center rounded-full bg-pnru text-white shadow-lg transition-transform duration-200 hover:scale-105"
+      className="chat-fab fixed right-4 sm:right-6 bottom-4 sm:bottom-6 z-50 flex h-[52px] w-[52px] sm:h-[60px] sm:w-[60px] items-center justify-center rounded-full bg-pnru text-white shadow-lg transition-transform duration-200 hover:scale-105"
     >
       <MessageCircle className="h-6 w-6 sm:h-7 sm:w-7" />
     </Link>

@@ -149,7 +149,7 @@ const AllCourses = () => {
                       {/* Link */}
                       <Link
                         to={`/courses/${course.id}`}
-                        className="flex items-center justify-center gap-2 text-pnru hover:text-opacity-80 font-medium text-sm transition-colors"
+                        className="flex min-h-[44px] items-center justify-center gap-2 text-pnru hover:text-opacity-80 font-medium text-sm transition-colors"
                       >
                         ดูรายละเอียด
                         <ArrowRight className="w-4 h-4" />

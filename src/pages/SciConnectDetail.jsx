@@ -43,7 +43,7 @@ const SciConnectDetail = () => {
         <p className="text-gray-500 mb-4">
           {status === 'not-found' ? 'ไม่พบข่าวนี้' : 'ไม่สามารถโหลดข่าวได้ในขณะนี้'}
         </p>
-        <Link to="/" className="text-pnru font-medium hover:underline">
+        <Link to="/" className="inline-flex min-h-[44px] items-center text-pnru font-medium hover:underline">
           ← กลับหน้าแรก
         </Link>
       </div>
@@ -52,7 +52,7 @@ const SciConnectDetail = () => {
 
   return (
     <div className="max-w-[900px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <Link to="/" className="text-pnru font-medium hover:underline">
+      <Link to="/" className="inline-flex min-h-[44px] items-center text-pnru font-medium hover:underline">
         ← กลับหน้าแรก
       </Link>
 

@@ -132,20 +132,27 @@ const CompareCourses = () => {
                           if (!isDisabled) handleToggleCourse(course.id)
                         }}
                         disabled={isDisabled}
-                        className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                          isSelected
-                            ? 'bg-pnru text-white'
-                            : isDisabled
-                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                            : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                        className={`absolute top-1.5 right-1.5 w-11 h-11 rounded-full flex items-center justify-center ${
+                          isDisabled ? 'cursor-not-allowed' : ''
                         }`}
                         aria-label={isSelected ? 'ยกเลิกการเลือก' : 'เลือกหลักสูตร'}
                       >
-                        {isSelected ? (
-                          <Check className="w-5 h-5" />
-                        ) : (
-                          <Plus className="w-5 h-5" />
-                        )}
+                        {/* วงกลมยังเท่าเดิม 32px แต่พื้นที่กดของปุ่มขยายเป็น 44px ตามขนาดนิ้ว */}
+                        <span
+                          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                            isSelected
+                              ? 'bg-pnru text-white'
+                              : isDisabled
+                              ? 'bg-gray-300 text-gray-500'
+                              : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                          }`}
+                        >
+                          {isSelected ? (
+                            <Check className="w-5 h-5" />
+                          ) : (
+                            <Plus className="w-5 h-5" />
+                          )}
+                        </span>
                       </button>
 
                       {/* Logo */}
@@ -186,7 +193,7 @@ const CompareCourses = () => {
                         <a
                           href={`/courses/${course.id}`}
                           onClick={(e) => e.stopPropagation()}
-                          className="flex items-center justify-center gap-1 text-pnru hover:text-opacity-80 font-medium text-xs transition-colors"
+                          className="flex min-h-[44px] items-center justify-center gap-1 text-pnru hover:text-opacity-80 font-medium text-xs transition-colors"
                         >
                           ดูรายละเอียด
                           <ArrowRight className="w-3 h-3" />

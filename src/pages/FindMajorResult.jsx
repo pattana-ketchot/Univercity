@@ -30,7 +30,7 @@ const RecommendationCard = ({ course, matchScore, reason, highlight }) => {
       <p className="text-sm lg:text-base text-gray-700 leading-relaxed mb-4">{reason}</p>
       <button
         onClick={() => navigate(`/courses/${course.id}`)}
-        className={`inline-flex items-center gap-2 text-sm font-medium ${highlight ? 'text-pnru' : 'text-gray-600'} hover:underline`}
+        className={`inline-flex min-h-[44px] items-center gap-2 text-sm font-medium ${highlight ? 'text-pnru' : 'text-gray-600'} hover:underline`}
       >
         ดูรายละเอียดหลักสูตร
         <ArrowRight className="w-4 h-4" />
@@ -60,7 +60,7 @@ const ScoreExplanation = () => {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls={panelId}
-        className="inline-flex items-center gap-1.5 rounded-md text-sm font-medium text-pnru hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-pnru/40"
+        className="inline-flex min-h-[44px] items-center gap-1.5 rounded-md text-sm font-medium text-pnru hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-pnru/40"
       >
         <Info className="w-4 h-4 shrink-0" aria-hidden="true" />
         เปอร์เซ็นต์คำนวณอย่างไร?

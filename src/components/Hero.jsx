@@ -83,7 +83,7 @@ const Hero = () => {
             <div className="hero-buttons hero-anim-buttons flex space-x-2 sm:space-x-3 lg:space-x-4">
               <Link
                 to="/find-major"
-                className="group hero-button-pnru inline-flex items-center justify-center gap-2 sm:gap-2.5 lg:gap-3 h-[42px] sm:h-[46px] lg:h-[50px] px-4 sm:px-5 lg:px-6 rounded-full bg-gradient-to-b from-[#2F8F66] to-[#1E5C40] text-white font-semibold text-sm sm:text-base lg:text-lg whitespace-nowrap shadow-[0_6px_16px_-4px_rgba(31,95,66,0.45)] hover:brightness-95"
+                className="group hero-button-pnru inline-flex items-center justify-center gap-2 sm:gap-2.5 lg:gap-3 h-[44px] sm:h-[46px] lg:h-[50px] px-4 sm:px-5 lg:px-6 rounded-full bg-gradient-to-b from-[#2F8F66] to-[#1E5C40] text-white font-semibold text-sm sm:text-base lg:text-lg whitespace-nowrap shadow-[0_6px_16px_-4px_rgba(31,95,66,0.45)] hover:brightness-95"
               >
                 ค้นหาสาขาที่ใช่
                 <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5 text-white transition-transform duration-200 ease-out group-hover:translate-x-1" />

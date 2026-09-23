@@ -4,7 +4,7 @@ import { ShieldCheck } from 'lucide-react'
 // กว้าง ~400px, responsive: calc(100% - 32px), มุมโค้ง 18px, เส้นขอบบาง + เงานุ่ม
 const AdminAuthCard = ({ title, subtitle, children, footer }) => (
   <div
-    className="bg-white border border-gray-200/80 rounded-[18px] shadow-[0_4px_24px_-8px_rgba(1,106,43,0.12),0_2px_8px_rgba(0,0,0,0.04)] p-7 sm:p-8"
+    className="bg-white border border-gray-200/80 rounded-[18px] shadow-[0_4px_24px_-8px_rgba(1,106,43,0.12),0_2px_8px_rgba(0,0,0,0.04)] p-5 sm:p-8"
     style={{ width: 'min(400px, calc(100% - 32px))' }}
   >
     <div className="flex flex-col items-center text-center">
@@ -21,7 +21,7 @@ const AdminAuthCard = ({ title, subtitle, children, footer }) => (
         <span className="text-white font-bold">LOGO</span>
       </div>
 
-      <span className="mt-4 inline-flex items-center gap-1.5 text-[11px] font-medium tracking-wide uppercase bg-[#E8F5F1] text-pnru px-2.5 py-1 rounded-full">
+      <span className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase bg-[#E8F5F1] text-pnru px-2.5 py-1 rounded-full">
         <ShieldCheck className="w-3.5 h-3.5" />
         Administration System
       </span>

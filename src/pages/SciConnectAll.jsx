@@ -35,7 +35,7 @@ const SciConnectAll = () => {
   return (
     <section className="py-16 bg-white w-full min-h-screen">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-        <Link to="/" className="text-pnru font-medium hover:underline">
+        <Link to="/" className="inline-flex min-h-[44px] items-center text-pnru font-medium hover:underline">
           ← กลับหน้าแรก
         </Link>
 

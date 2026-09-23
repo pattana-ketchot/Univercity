@@ -30,7 +30,7 @@ const AdminAuthInput = ({
           id={inputId}
           aria-invalid={error ? 'true' : undefined}
           aria-describedby={error ? errorId : undefined}
-          className={`w-full ${Icon ? 'pl-10' : 'pl-4'} ${rightSlot ? 'pr-11' : 'pr-4'} py-2.5 border rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 transition-colors ${
+          className={`w-full ${Icon ? 'pl-10' : 'pl-4'} ${rightSlot ? 'pr-12' : 'pr-4'} py-2.5 border rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 transition-colors ${
             error
               ? 'border-red-300 focus:ring-red-200 focus:border-red-400'
               : 'border-gray-300 focus:ring-pnru/30 focus:border-pnru'
@@ -38,7 +38,7 @@ const AdminAuthInput = ({
           {...inputProps}
         />
         {rightSlot && (
-          <div className="absolute right-1 top-1/2 -translate-y-1/2">{rightSlot}</div>
+          <div className="absolute right-0.5 top-1/2 -translate-y-1/2">{rightSlot}</div>
         )}
       </div>
       {error && (

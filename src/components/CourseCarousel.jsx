@@ -48,7 +48,7 @@ const CourseCarousel = () => {
         {/* Section Header */}
         <Reveal as="div" className="flex items-center justify-between gap-3 mb-4 sm:mb-6 md:mb-8">
           <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-pnru">หลักสูตรในคณะวิทยาศาสตร์และเทคโนโลยี</h2>
-          <Link to="/courses" className="flex-shrink-0 whitespace-nowrap text-sm md:text-base text-pnru font-medium hover:underline">
+          <Link to="/courses" className="inline-flex min-h-[44px] items-center flex-shrink-0 whitespace-nowrap text-sm md:text-base text-pnru font-medium hover:underline">
             ดูหลักสูตรทั้งหมด →
           </Link>
         </Reveal>
@@ -66,7 +66,7 @@ const CourseCarousel = () => {
             {/* Left Arrow */}
             <button
               onClick={() => scroll('left')}
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 md:-translate-x-4 z-10 w-8 h-8 md:w-10 md:h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition"
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 md:-translate-x-4 z-10 w-11 h-11 md:w-10 md:h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition"
             >
               <span className="text-lg md:text-xl text-primary">‹</span>
             </button>
@@ -98,7 +98,7 @@ const CourseCarousel = () => {
             {/* Right Arrow */}
             <button
               onClick={() => scroll('right')}
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 md:translate-x-4 z-10 w-8 h-8 md:w-10 md:h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition"
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 md:translate-x-4 z-10 w-11 h-11 md:w-10 md:h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition"
             >
               <span className="text-lg md:text-xl text-primary">›</span>
             </button>

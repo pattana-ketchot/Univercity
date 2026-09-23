@@ -151,7 +151,7 @@ const FindMajor = () => {
                     key={track.id}
                     onClick={() => setSelectedTrack(track.id)}
                     aria-selected={selectedTrack === track.id}
-                    className={`relative px-3 py-2.5 lg:py-3 rounded-lg border-2 transition-all duration-150 ease-out active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-pnru focus:ring-offset-2 flex items-center justify-center ${
+                    className={`relative min-h-[44px] px-3 py-2.5 lg:py-3 rounded-lg border-2 transition-all duration-150 ease-out active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-pnru focus:ring-offset-2 flex items-center justify-center ${
                       selectedTrack === track.id
                         ? 'border-pnru bg-green-50'
                         : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
@@ -227,7 +227,7 @@ const FindMajor = () => {
                     key={subject}
                     onClick={() => handleSubjectToggle(subject)}
                     aria-selected={selectedSubjects.includes(subject)}
-                    className={`relative px-3 py-2 lg:py-2.5 rounded-lg border-2 transition-all duration-150 ease-out active:scale-[0.98] text-sm lg:text-base focus:outline-none focus:ring-2 focus:ring-pnru focus:ring-offset-2 ${
+                    className={`relative min-h-[44px] px-3 py-2 lg:py-2.5 rounded-lg border-2 transition-all duration-150 ease-out active:scale-[0.98] text-sm lg:text-base focus:outline-none focus:ring-2 focus:ring-pnru focus:ring-offset-2 ${
                       selectedSubjects.includes(subject)
                         ? 'border-pnru bg-green-50 text-pnru font-medium'
                         : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700'

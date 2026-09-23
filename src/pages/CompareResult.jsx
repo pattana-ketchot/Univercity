@@ -110,6 +110,32 @@ const CompareResult = () => {
     navigate('/compare')
   }
 
+  // หัวข้อที่เอามาเทียบ ใช้ชุดเดียวกันทั้งตาราง (md ขึ้นไป) และการ์ดเรียงลงมา (ต่ำกว่า md)
+  // เพื่อให้สองมุมมองแสดงข้อมูลชุดเดียวกันเสมอ
+  const comparisonRows = [
+    {
+      key: 'description',
+      label: 'รายละเอียดหลักสูตร',
+      render: (course) => (
+        <p className="text-sm text-gray-600">{course.description}</p>
+      )
+    },
+    {
+      key: 'careers',
+      label: 'อาชีพที่สามารถทำได้',
+      render: (course) => (
+        <ul className="space-y-1">
+          {course.careers.map((career, idx) => (
+            <li key={idx} className="text-sm text-gray-600 flex items-start gap-2">
+              <Check className="w-4 h-4 text-pnru mt-0.5 flex-shrink-0" />
+              <span>{career}</span>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  ]
+
   return (
     <div className="min-h-screen bg-gray-50 pb-12">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
@@ -126,7 +152,7 @@ const CompareResult = () => {
           <div className="flex flex-wrap gap-3">
             <button
               onClick={handleAddMore}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-pnru text-white rounded-lg font-medium hover:bg-opacity-90 transition-colors"
+              className="inline-flex min-h-[44px] items-center gap-2 px-4 py-2 bg-pnru text-white rounded-lg font-medium hover:bg-opacity-90 transition-colors"
             >
               <Plus className="w-5 h-5" />
               เพิ่มสาขาอื่น
@@ -134,7 +160,7 @@ const CompareResult = () => {
             {selectedCourses.length > 0 && (
               <button
                 onClick={handleClearAll}
-                className="inline-flex items-center gap-2 px-4 py-2 border-2 border-red-500 text-red-500 rounded-lg font-medium hover:bg-red-50 transition-colors"
+                className="inline-flex min-h-[44px] items-center gap-2 px-4 py-2 border-2 border-red-500 text-red-500 rounded-lg font-medium hover:bg-red-50 transition-colors"
               >
                 <Trash2 className="w-5 h-5" />
                 ล้างทั้งหมด
@@ -154,7 +180,7 @@ const CompareResult = () => {
               {!aiLoading && (
                 <button
                   onClick={runAiCompare}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-pnru text-white rounded-lg font-medium hover:bg-opacity-90 transition-colors text-sm"
+                  className="inline-flex min-h-[44px] items-center gap-2 px-4 py-2 bg-pnru text-white rounded-lg font-medium hover:bg-opacity-90 transition-colors text-sm"
                 >
                   <Sparkles className="w-4 h-4" />
                   {aiResult ? 'วิเคราะห์อีกครั้ง' : 'ให้ AI ช่วยวิเคราะห์'}
@@ -243,91 +269,142 @@ const CompareResult = () => {
             กำลังโหลดข้อมูล...
           </div>
         ) : selectedCourses.length >= 2 ? (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="border-b-2 border-gray-200">
-                    <th className="bg-pnru/10 px-4 py-4 text-left text-sm font-bold text-pnru border-r border-gray-200 sticky left-0 z-20 min-w-[200px]">
-                      หัวข้อเปรียบเทียบ
-                    </th>
-                    {selectedCourses.map(course => (
-                      <th key={course.id} className="bg-white px-4 py-4 min-w-[280px]">
-                        <div className="flex flex-col items-center gap-3">
-                          {/* Logo */}
-                          <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
-                            {course.logo ? (
-                              <img
-                                src={course.logo}
-                                alt={course.title}
-                                className="w-12 h-12 object-contain"
-                                onError={(e) => {
-                                  e.target.style.display = 'none'
-                                  e.target.nextSibling.style.display = 'block'
-                                }}
-                              />
-                            ) : null}
-                            <GraduationCap
-                              className="w-10 h-10 text-gray-400"
-                              style={{ display: course.logo ? 'none' : 'block' }}
-                            />
-                          </div>
+          <>
+            {/* มือถือ — อ่านทีละหัวข้อ เทียบทุกสาขาในหัวข้อเดียวกัน
+                ตารางเดิมกว้าง 760px ซึ่งกินจอ 360px เกินครึ่งไปกับคอลัมน์หัวข้ออย่างเดียว */}
+            <div className="md:hidden space-y-4">
+              {/* สาขาที่กำลังเทียบ พร้อมหมายเลขกำกับ ใช้อ้างอิงในแต่ละหัวข้อด้านล่าง */}
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+                <h2 className="text-sm font-bold text-pnru mb-3">สาขาที่เปรียบเทียบ</h2>
+                <ul className="space-y-2">
+                  {selectedCourses.map((course, idx) => (
+                    <li key={course.id} className="flex items-center gap-3">
+                      <div className="w-11 h-11 flex-shrink-0 bg-gray-100 rounded-lg flex items-center justify-center">
+                        {course.logo ? (
+                          <img
+                            src={course.logo}
+                            alt={course.title}
+                            className="w-8 h-8 object-contain"
+                            onError={(e) => {
+                              e.target.style.display = 'none'
+                              e.target.nextSibling.style.display = 'block'
+                            }}
+                          />
+                        ) : null}
+                        <GraduationCap
+                          className="w-6 h-6 text-gray-400"
+                          style={{ display: course.logo ? 'none' : 'block' }}
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-bold text-pnru truncate">
+                          {idx + 1}. {course.title}
+                        </h3>
+                        <p className="text-xs text-gray-500 truncate">{course.title_en}</p>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveCourse(course.id)}
+                        className="-mr-2 w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                        aria-label={`ลบ ${course.title}`}
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-                          {/* Course Name */}
-                          <div className="text-center">
-                            <h3 className="font-bold text-pnru mb-1">{course.title}</h3>
-                            <p className="text-xs text-gray-500">{course.title_en}</p>
-                          </div>
-
-                          {/* Remove Button */}
-                          <button
-                            onClick={() => handleRemoveCourse(course.id)}
-                            className="text-gray-400 hover:text-red-500 transition-colors"
-                            aria-label="ลบ"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        </div>
-                      </th>
+              {comparisonRows.map((row) => (
+                <div key={row.key} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                  <h3 className="bg-pnru/10 px-4 py-3 text-sm font-bold text-pnru">
+                    {row.label}
+                  </h3>
+                  <div className="divide-y divide-gray-200">
+                    {selectedCourses.map((course, idx) => (
+                      <div key={course.id} className="px-4 py-3">
+                        <p className="text-xs font-semibold text-gray-500 mb-1.5">
+                          {idx + 1}. {course.title}
+                        </p>
+                        {row.render(course)}
+                      </div>
                     ))}
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {/* Row: Description */}
-                  <tr className="border-b border-gray-200">
-                    <td className="bg-gray-50 px-4 py-4 text-sm font-semibold text-gray-700 border-r border-gray-200 sticky left-0 z-10">
-                      รายละเอียดหลักสูตร
-                    </td>
-                    {selectedCourses.map(course => (
-                      <td key={course.id} className="px-4 py-4 text-sm text-gray-600">
-                        {course.description}
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Row: Careers */}
-                  <tr>
-                    <td className="bg-gray-50 px-4 py-4 text-sm font-semibold text-gray-700 border-r border-gray-200 sticky left-0 z-10">
-                      อาชีพที่สามารถทำได้
-                    </td>
-                    {selectedCourses.map(course => (
-                      <td key={course.id} className="px-4 py-4">
-                        <ul className="space-y-1">
-                          {course.careers.map((career, idx) => (
-                            <li key={idx} className="text-sm text-gray-600 flex items-start gap-2">
-                              <Check className="w-4 h-4 text-pnru mt-0.5 flex-shrink-0" />
-                              <span>{career}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </td>
-                    ))}
-                  </tr>
-                </tbody>
-              </table>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
+
+            {/* แท็บเล็ตขึ้นไป — ตารางเดิม ลดความกว้างขั้นต่ำของคอลัมน์ลงเพื่อไม่ให้ขอบขวาโดนตัดที่ 768px */}
+            <div className="hidden md:block bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="border-b-2 border-gray-200">
+                      <th className="bg-pnru/10 px-4 py-4 text-left text-sm font-bold text-pnru border-r border-gray-200 sticky left-0 z-20 min-w-[160px] lg:min-w-[200px]">
+                        หัวข้อเปรียบเทียบ
+                      </th>
+                      {selectedCourses.map(course => (
+                        <th key={course.id} className="bg-white px-4 py-4 min-w-[220px] lg:min-w-[280px]">
+                          <div className="flex flex-col items-center gap-3">
+                            {/* Logo */}
+                            <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+                              {course.logo ? (
+                                <img
+                                  src={course.logo}
+                                  alt={course.title}
+                                  className="w-12 h-12 object-contain"
+                                  onError={(e) => {
+                                    e.target.style.display = 'none'
+                                    e.target.nextSibling.style.display = 'block'
+                                  }}
+                                />
+                              ) : null}
+                              <GraduationCap
+                                className="w-10 h-10 text-gray-400"
+                                style={{ display: course.logo ? 'none' : 'block' }}
+                              />
+                            </div>
+
+                            {/* Course Name */}
+                            <div className="text-center">
+                              <h3 className="font-bold text-pnru mb-1">{course.title}</h3>
+                              <p className="text-xs text-gray-500">{course.title_en}</p>
+                            </div>
+
+                            {/* Remove Button */}
+                            <button
+                              onClick={() => handleRemoveCourse(course.id)}
+                              className="w-11 h-11 flex items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                              aria-label={`ลบ ${course.title}`}
+                            >
+                              <X className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {comparisonRows.map((row, rowIdx) => (
+                      <tr
+                        key={row.key}
+                        className={rowIdx < comparisonRows.length - 1 ? 'border-b border-gray-200' : undefined}
+                      >
+                        <td className="bg-gray-50 px-4 py-4 text-sm font-semibold text-gray-700 border-r border-gray-200 sticky left-0 z-10">
+                          {row.label}
+                        </td>
+                        {selectedCourses.map(course => (
+                          <td key={course.id} className="px-4 py-4 align-top">
+                            {row.render(course)}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         ) : (
           // Empty State
           <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
@@ -364,13 +441,13 @@ const CompareResult = () => {
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setShowConfirmClear(false)}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                className="min-h-[44px] px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
               >
                 ยกเลิก
               </button>
               <button
                 onClick={confirmClearAll}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors"
+                className="min-h-[44px] px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors"
               >
                 ยืนยัน
               </button>

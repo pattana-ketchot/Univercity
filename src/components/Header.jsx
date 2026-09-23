@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
 
@@ -6,6 +6,12 @@ const Header = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  // เปิดเมนูมือถืออยู่ ห้ามให้หน้าข้างหลังเลื่อนตาม ไม่งั้นปัดแล้วหลุดไปโดนเนื้อหาข้างหลัง
+  useEffect(() => {
+    document.body.classList.toggle('nav-open', mobileMenuOpen)
+    return () => document.body.classList.remove('nav-open')
+  }, [mobileMenuOpen])
 
   const scrollToAbout = () => {
     document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })
@@ -106,7 +112,7 @@ const Header = () => {
         <button
           type="button"
           onClick={() => setMobileMenuOpen((v) => !v)}
-          className="xl:hidden ml-auto p-2 -mr-2 text-gray-700 hover:text-pnru transition-colors"
+          className="xl:hidden ml-auto p-2.5 -mr-2.5 text-gray-700 hover:text-pnru transition-colors"
           aria-label={mobileMenuOpen ? 'ปิดเมนู' : 'เปิดเมนู'}
           aria-expanded={mobileMenuOpen}
         >

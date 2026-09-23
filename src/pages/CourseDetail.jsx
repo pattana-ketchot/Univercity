@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase, isConfigured } from '../lib/supabase'
 import {
@@ -111,6 +111,27 @@ const CourseDetail = () => {
 
     fetchCourse()
   }, [id])
+
+  /* บนจอแคบแถบแท็บกว้างเกินที่มี แท็บท้าย ๆ เลยถูกตัดหายโดยไม่มีอะไรบอก
+     จับสถานะการเลื่อนไว้ เพื่อโชว์เงาจาง ๆ ที่ขอบด้านที่ยังมีแท็บเหลืออยู่
+     ต้องประกาศ hook ไว้เหนือ early return ทุกอัน ไม่งั้นลำดับ hook จะไม่เท่ากันทุกรอบ render */
+  const tabsRef = useRef(null)
+  const [tabsOverflow, setTabsOverflow] = useState({ left: false, right: false })
+
+  const syncTabsOverflow = useCallback(() => {
+    const el = tabsRef.current
+    if (!el) return
+    setTabsOverflow({
+      left: el.scrollLeft > 4,
+      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4
+    })
+  }, [])
+
+  useEffect(() => {
+    syncTabsOverflow()
+    window.addEventListener('resize', syncTabsOverflow)
+    return () => window.removeEventListener('resize', syncTabsOverflow)
+  }, [syncTabsOverflow, course])
 
   if (loading) {
     return <div className="flex min-h-screen items-center justify-center bg-white text-gray-500">กำลังโหลด...</div>
@@ -324,8 +345,12 @@ const CourseDetail = () => {
           <div className="order-2 min-w-0 lg:order-1 lg:col-span-7">
 
             {/* Tabs */}
-            <div className="border-b border-gray-200">
-              <div className="-mb-px flex gap-1 overflow-x-auto">
+            <div className="relative border-b border-gray-200">
+              <div
+                ref={tabsRef}
+                onScroll={syncTabsOverflow}
+                className="tab-scroll -mb-px flex gap-1 overflow-x-auto"
+              >
                 {tabs.map((tab) => {
                   const TabIcon = tab.icon
                   const active = activeTab === tab.id
@@ -345,6 +370,14 @@ const CourseDetail = () => {
                   )
                 })}
               </div>
+
+              {/* เงาบอกว่ายังมีแท็บเลยขอบไปอีก */}
+              {tabsOverflow.left && (
+                <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-white to-transparent" />
+              )}
+              {tabsOverflow.right && (
+                <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent" />
+              )}
             </div>
 
             <div className="mt-6 space-y-6">

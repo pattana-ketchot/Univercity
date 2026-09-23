@@ -42,7 +42,7 @@ const CourseCard = ({ id, logo, title, titleEn, description }) => {
         {/* View Details Button */}
         <Link
           to={id ? `/courses/${id}` : '#'}
-          className="text-pnru font-medium text-sm flex items-center justify-center gap-2 group hover:text-primary-dark transition-colors"
+          className="text-pnru font-medium text-sm flex min-h-[44px] items-center justify-center gap-2 group hover:text-primary-dark transition-colors"
         >
           <span>ดูรายละเอียด</span>
           <svg
