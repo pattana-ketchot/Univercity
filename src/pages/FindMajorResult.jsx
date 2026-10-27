@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Sparkles, Loader2, RotateCcw, ArrowRight, AlertTriangle, Info, ChevronDown } from 'lucide-react'
 import { fetchSiteCourses } from '../lib/siteCourses'
+import { forUndergraduateAdvice } from '../lib/courseLevels'
 import { getFindMajorAnswers, clearFindMajorAnswers } from '../lib/findMajorAnswers'
 
 const steps = [
@@ -139,7 +140,10 @@ const FindMajorResult = () => {
     const init = async () => {
       let data = []
       try {
-        data = await fetchSiteCourses()
+        // แบบสอบถามถามสายการเรียนระดับ ม.ปลาย/ปวช. คนที่ตอบคือผู้เลือกปริญญาตรี
+        // จึงต้องตัดหลักสูตรบัณฑิตศึกษาออกก่อนส่งให้ AI จัดอันดับ
+        // ไม่งั้นนักเรียน ม.6 จะได้คำแนะนำให้เรียนปริญญาโทหรือเอก
+        data = forUndergraduateAdvice(await fetchSiteCourses())
       } catch {
         setError('ระบบยังอ่านข้อมูลสาขาวิชาไม่ได้ในขณะนี้')
         setLoading(false)

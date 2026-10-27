@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { fetchSiteCourse } from '../lib/siteCourses'
+import { applyUrlFor } from '../lib/applyUrl'
 import {
   Clock,
   Users,
@@ -11,7 +12,9 @@ import {
   Sparkles,
   Briefcase,
   Info,
-  UserCheck
+  UserCheck,
+  ExternalLink,
+  CalendarClock
 } from 'lucide-react'
 
 /* ------------------------------------------------------------------ */
@@ -160,8 +163,12 @@ const CourseDetail = () => {
   const documents = Array.isArray(detail.documents) ? detail.documents : []
   const infoList = Array.isArray(detail.important_info) ? detail.important_info : []
   const qualifications = Array.isArray(detail.qualifications) ? detail.qualifications : []
+  const admissionConditions = Array.isArray(detail.admission_conditions)
+    ? detail.admission_conditions
+    : []
 
-  const hasDetailsContent = hasText(detail.about) || qualifications.length > 0 || highlights.length > 0 || careers.length > 0
+  const hasDetailsContent = hasText(detail.about) || qualifications.length > 0
+    || admissionConditions.length > 0 || highlights.length > 0 || careers.length > 0
 
   /* --- tabs (always 3, ตามสเปค) --- */
   const tabs = [
@@ -262,6 +269,79 @@ const CourseDetail = () => {
     </div>
   )
 
+  /* --- ที่มาของคุณสมบัติผู้สมัคร ---
+     คุณสมบัติที่รับสมัครเปลี่ยนได้ทุกปีการศึกษา คนอ่านต้องเห็นว่าข้อความชุดนี้
+     มาจากไหนและตรวจไว้เมื่อไร ไม่งั้นอ่านปีถัดไปก็ไม่รู้ว่ายังใช้ได้อยู่หรือเปล่า
+     แสดงเฉพาะเมื่อผู้ดูแลบันทึกที่มาไว้ — ไม่เติมข้อความที่มาให้เองถ้าไม่มีข้อมูล */
+  const sourceUrl = hasText(detail.source_url) ? String(detail.source_url).trim() : ''
+  const sourceCheckedAt = hasText(detail.source_checked_at)
+    ? String(detail.source_checked_at).trim()
+    : ''
+  // ลิงก์เงื่อนไขฉบับเต็ม — ใช้กับหลักสูตรที่หน้าเว็บคณะสรุปสั้นกว่าเล่ม มคอ.2
+  const fullConditionsUrl = hasText(detail.full_conditions_url)
+    ? String(detail.full_conditions_url).trim()
+    : ''
+  const qualificationsNote = hasText(detail.qualifications_note)
+    ? String(detail.qualifications_note).trim()
+    : ''
+
+  const noteLinks = [
+    fullConditionsUrl && { href: fullConditionsUrl, label: 'ดูเงื่อนไขฉบับเต็ม' },
+    { href: applyUrlFor(detail), label: 'ประกาศรับสมัคร' },
+    sourceUrl && { href: sourceUrl, label: 'ดูข้อมูลต้นทาง' }
+  ].filter(Boolean)
+
+  const SourceNote = (
+    <div className="mt-4 max-w-2xl border-t border-gray-100 pt-3 text-xs leading-relaxed text-gray-500">
+      {qualificationsNote && (
+        <p className="mb-2 flex items-start gap-1.5 text-gray-600">
+          <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+          <span>{qualificationsNote}</span>
+        </p>
+      )}
+      <p>
+        {noteLinks.map((link, index) => (
+          <span key={link.label}>
+            {index > 0 && ' · '}
+            <a
+              href={link.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-pnru"
+            >
+              {link.label}
+            </a>
+          </span>
+        ))}
+        {sourceCheckedAt && ` · ตรวจข้อมูลเมื่อ ${sourceCheckedAt}`}
+      </p>
+      <p className="mt-1">
+        เงื่อนไขการรับสมัครอาจเปลี่ยนตามประกาศของมหาวิทยาลัยในแต่ละปีการศึกษา
+      </p>
+    </div>
+  )
+
+  /* --- ปุ่มสมัครเรียน ---
+     ส่งต่อไปที่ระบบรับสมัครของมหาวิทยาลัย ระบบนี้ไม่รับสมัครเองและไม่เก็บข้อมูลผู้สมัคร
+     เปิดแท็บใหม่เพราะเป็นเว็บคนละที่ คนอ่านยังต้องกลับมาดูหน้าหลักสูตรต่อได้ */
+  const ApplyBox = (
+    <div className="mt-4 rounded-[10px] border border-gray-200 bg-white p-6 lg:p-7">
+      <h3 className="text-base font-bold text-gray-900">สนใจสมัครเรียน</h3>
+      <p className="mt-1.5 text-sm leading-relaxed text-gray-500">
+        สมัครผ่านระบบรับสมัครนักศึกษาของมหาวิทยาลัยราชภัฏพระนคร
+      </p>
+      <a
+        href={applyUrlFor(detail)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-4 flex items-center justify-center gap-2 rounded-full border-2 border-green-800 bg-green-800 px-5 py-2.5 font-medium text-white transition-colors hover:border-green-900 hover:bg-green-900"
+      >
+        สมัครเรียน
+        <ExternalLink className="h-4 w-4" />
+      </a>
+    </div>
+  )
+
   return (
     <div className="min-h-screen bg-white">
       <div className="mx-auto max-w-[1280px] px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
@@ -339,7 +419,10 @@ const CourseDetail = () => {
 
           {/* Sidebar — mobile: ใต้ header ก่อนรายละเอียด / desktop: คอลัมน์ขวา sticky */}
           <aside className="order-1 lg:order-2 lg:col-span-3 lg:-mt-20">
-            <div className="lg:sticky lg:top-6">{ImportantInfoBox}</div>
+            <div className="lg:sticky lg:top-6">
+              {ImportantInfoBox}
+              {ApplyBox}
+            </div>
           </aside>
 
           {/* Main content */}
@@ -395,7 +478,7 @@ const CourseDetail = () => {
                       </SectionCard>
                     )}
 
-                    {qualifications.length > 0 && (
+                    {(qualifications.length > 0 || admissionConditions.length > 0) && (
                       <SectionCard icon={UserCheck} title="คุณสมบัติผู้สมัคร" bare>
                         <div className="max-w-2xl space-y-2">
                           {qualifications.map((item, index) => (
@@ -405,6 +488,26 @@ const CourseDetail = () => {
                             </div>
                           ))}
                         </div>
+
+                        {/* เงื่อนไขที่ผูกกับรอบรับสมัคร แยกหัวข้อจากคุณสมบัติทั่วไป
+                            เพราะส่วนนี้เปลี่ยนทุกรอบ ส่วนบนไม่เปลี่ยน */}
+                        {admissionConditions.length > 0 && (
+                          <div className="mt-4 max-w-2xl">
+                            <h4 className="mb-2 text-sm font-semibold text-gray-800">
+                              เงื่อนไขตามรอบรับสมัคร
+                            </h4>
+                            <div className="space-y-2">
+                              {admissionConditions.map((item, index) => (
+                                <div key={index} className="flex items-start gap-2 text-sm text-gray-700 lg:text-base">
+                                  <CalendarClock className="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-400" />
+                                  <span>{item}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {SourceNote}
                       </SectionCard>
                     )}
 

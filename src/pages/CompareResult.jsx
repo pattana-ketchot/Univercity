@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Plus, Trash2, X, Check, GraduationCap, Sparkles, Loader2, AlertTriangle } from 'lucide-react'
 import { fetchSiteCoursesByIds } from '../lib/siteCourses'
+import { levelOf } from '../lib/courseLevels'
 
 const CompareResult = () => {
   const navigate = useNavigate()
@@ -50,10 +51,13 @@ const CompareResult = () => {
     setAiResult(null)
 
     try {
+      // ส่งระดับการศึกษาไปด้วย เพราะคณะมีหลักสูตรที่ชื่อสาขาเหมือนกันทุกตัวอักษร
+      // ต่างกันแค่ระดับ (โท/เอก) ถ้าไม่บอกระดับ โมเดลจะแยกสองรายการนี้ไม่ออก
       const payload = selectedCourses.map((c) => ({
         id: c.id,
         title: c.title,
         title_en: c.title_en,
+        level: levelOf(c) || undefined,
         description: c.description,
         careers: c.careers
       }))
@@ -211,6 +215,11 @@ const CompareResult = () => {
                       return (
                         <div key={item.courseId} className="rounded-lg border border-gray-200 p-4">
                           <h3 className="font-bold text-pnru">{course?.title || 'สาขา'}</h3>
+                          {course && levelOf(course) && (
+                            <span className="mt-1 inline-block rounded-full bg-[#E8F5F1] px-2 py-0.5 text-[11px] font-medium text-pnru">
+                              {levelOf(course)}
+                            </span>
+                          )}
                           {item.bestFor && (
                             <p className="mt-1 text-sm text-gray-600">
                               <span className="font-medium text-gray-800">เหมาะกับ:</span> {item.bestFor}
@@ -361,6 +370,11 @@ const CompareResult = () => {
                             <div className="text-center">
                               <h3 className="font-bold text-pnru mb-1">{course.title}</h3>
                               <p className="text-xs text-gray-500">{course.title_en}</p>
+                              {levelOf(course) && (
+                                <span className="mt-1 inline-block rounded-full bg-[#E8F5F1] px-2 py-0.5 text-[11px] font-medium text-pnru">
+                                  {levelOf(course)}
+                                </span>
+                              )}
                             </div>
 
                             {/* Remove Button */}

@@ -13,8 +13,19 @@ const FORM_TABS = [
   { id: 'faculty', label: 'คณะอาจารย์', icon: Users }
 ]
 
+// ตัวแบ่งบรรทัดของช่องที่กรอกเป็นรายการ — ประกาศไว้ที่เดียวเพื่อไม่ให้เขียนผิดคนละแบบ
+const LINE_BREAK = String.fromCharCode(10)
+
 const LEVEL_OPTIONS = ['ปริญญาตรี', 'ปริญญาโท', 'ปริญญาเอก', 'ประกาศนียบัตรบัณฑิต', 'อนุปริญญา']
 const DURATION_OPTIONS = ['2 ปี', '3 ปี', '4 ปี', '4.5 ปี', '5 ปี', '6 ปี']
+
+// ค่าที่บันทึกไว้แล้วแต่ไม่อยู่ในรายการตัวเลือก ต้องเพิ่มเข้าไปเป็นตัวเลือกด้วย
+//
+// เช่นหลักสูตรบัณฑิตศึกษาใช้ระยะเวลา "2 ปี (แผน 1 แบบวิชาการ)" ตามที่เว็บคณะประกาศ
+// ซึ่งไม่ตรงกับตัวเลือกใด ถ้าไม่เพิ่มเข้าไป select จะแสดงว่างทั้งที่ข้อมูลมีอยู่
+// ผู้ดูแลจะมองไม่เห็นค่าเดิมแล้วเผลอเลือกทับของทางการไปโดยไม่รู้ตัว
+const withCurrent = (options, current) =>
+  current && !options.includes(current) ? [current, ...options] : options
 
 const emptyForm = {
   title: '',
@@ -28,6 +39,12 @@ const emptyForm = {
   detailTuitionTotal: '',
   detailAbout: '',
   detailQualificationsText: '',
+  detailAdmissionConditionsText: '',
+  detailQualificationsNote: '',
+  detailFullConditionsUrl: '',
+  detailSourceUrl: '',
+  detailSourceCheckedAt: '',
+  detailApplyUrl: '',
   highlights: [],
   faculty: [],
   documents: []
@@ -104,6 +121,12 @@ const CourseFormContent = ({ user }) => {
         detailTuitionTotal: detail.tuition_total || '',
         detailAbout: detail.about || '',
         detailQualificationsText: (detail.qualifications || []).join('\n'),
+        detailAdmissionConditionsText: (detail.admission_conditions || []).join(LINE_BREAK),
+        detailQualificationsNote: detail.qualifications_note || '',
+        detailFullConditionsUrl: detail.full_conditions_url || '',
+        detailSourceUrl: detail.source_url || '',
+        detailSourceCheckedAt: detail.source_checked_at || '',
+        detailApplyUrl: detail.apply_url || '',
         highlights: normalizeHighlights(detail.highlights),
         faculty: normalizeFaculty(detail.faculty),
         documents: normalizeDocuments(detail.documents)
@@ -200,6 +223,10 @@ const CourseFormContent = ({ user }) => {
       .split('\n')
       .map((q) => q.trim())
       .filter(Boolean)
+    const admissionConditions = form.detailAdmissionConditionsText
+      .split(LINE_BREAK)
+      .map((q) => q.trim())
+      .filter(Boolean)
     const highlights = form.highlights
       .filter((h) => h.title.trim())
       .map((h) => ({ title: h.title.trim(), description: h.description.trim() || undefined }))
@@ -232,6 +259,12 @@ const CourseFormContent = ({ user }) => {
       tuition_total: form.detailTuitionTotal.trim() || undefined,
       about: form.detailAbout.trim() || undefined,
       qualifications: qualifications.length ? qualifications : undefined,
+      admission_conditions: admissionConditions.length ? admissionConditions : undefined,
+      qualifications_note: form.detailQualificationsNote.trim() || undefined,
+      full_conditions_url: form.detailFullConditionsUrl.trim() || undefined,
+      source_url: form.detailSourceUrl.trim() || undefined,
+      source_checked_at: form.detailSourceCheckedAt.trim() || undefined,
+      apply_url: form.detailApplyUrl.trim() || undefined,
       highlights: highlights.length ? highlights : undefined,
       faculty: faculty.length ? faculty : undefined,
       documents: documents.length ? documents : undefined
@@ -391,7 +424,7 @@ const CourseFormContent = ({ user }) => {
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pnru"
               >
                 <option value="">-- เลือกระดับการศึกษา --</option>
-                {LEVEL_OPTIONS.map((lvl) => (
+                {withCurrent(LEVEL_OPTIONS, form.detailLevel).map((lvl) => (
                   <option key={lvl} value={lvl}>{lvl}</option>
                 ))}
               </select>
@@ -405,7 +438,7 @@ const CourseFormContent = ({ user }) => {
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pnru"
               >
                 <option value="">-- เลือกระยะเวลา --</option>
-                {DURATION_OPTIONS.map((d) => (
+                {withCurrent(DURATION_OPTIONS, form.detailDuration).map((d) => (
                   <option key={d} value={d}>{d}</option>
                 ))}
               </select>
@@ -453,6 +486,93 @@ const CourseFormContent = ({ user }) => {
               onChange={handleChange}
               placeholder={'สำเร็จการศึกษาระดับมัธยมศึกษาตอนปลายหรือเทียบเท่า\nมีผลการเรียนเฉลี่ยสะสมไม่ต่ำกว่า 2.00'}
               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pnru font-mono text-sm"
+            />
+          </div>
+
+          {/* เงื่อนไขที่ผูกกับรอบรับสมัคร แยกจากคุณสมบัติทั่วไปข้างบน
+              ส่วนนี้เปลี่ยนทุกรอบรับสมัคร เช่น ต้องมีผลการเรียนกี่ภาคจึงสมัครรอบนั้นได้
+              แยกช่องไว้เพื่อให้แก้เฉพาะส่วนที่เปลี่ยนได้ โดยไม่ต้องแตะคุณสมบัติทั่วไป */}
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              เงื่อนไขตามรอบรับสมัคร (บรรทัดละ 1 ข้อ)
+            </label>
+            <textarea
+              name="detailAdmissionConditionsText"
+              rows={3}
+              value={form.detailAdmissionConditionsText}
+              onChange={handleChange}
+              placeholder="เช่น ใช้เกรดเฉลี่ยสะสม/หน่วยกิตสะสม อย่างน้อย 4-5 ภาคการศึกษา ในการสมัครเรียน"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pnru font-mono text-sm"
+            />
+          </div>
+
+          {/* ใช้เมื่อข้อความคุณสมบัติด้านบนเป็นฉบับย่อ ไม่ใช่เงื่อนไขครบทุกข้อ
+              เช่น หลักสูตรบัณฑิตศึกษาที่เล่ม มคอ.2 แยกเงื่อนไขตามแผนการเรียน */}
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                ข้อความกำกับใต้คุณสมบัติ (ไม่จำเป็น)
+              </label>
+              <input
+                name="detailQualificationsNote"
+                value={form.detailQualificationsNote}
+                onChange={handleChange}
+                placeholder="เช่น ข้อความข้างต้นเป็นฉบับย่อ"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pnru"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                ลิงก์เงื่อนไขฉบับเต็ม (ไม่จำเป็น)
+              </label>
+              <input
+                name="detailFullConditionsUrl"
+                value={form.detailFullConditionsUrl}
+                onChange={handleChange}
+                placeholder="เช่น ลิงก์เล่ม มคอ.2"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pnru"
+              />
+            </div>
+          </div>
+
+          {/* ที่มาของข้อมูลคุณสมบัติ — คุณสมบัติที่รับสมัครเปลี่ยนได้ทุกปีการศึกษา
+              ถ้าไม่บันทึกว่าลอกมาจากไหนและตรวจเมื่อไร ปีถัดไปจะไม่มีใครรู้ว่ายังใช้ได้อยู่หรือเปล่า
+              สองช่องนี้แสดงเป็นบรรทัดเล็กใต้หัวข้อคุณสมบัติผู้สมัครในหน้ารายละเอียด */}
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">ลิงก์ข้อมูลต้นทาง</label>
+              <input
+                name="detailSourceUrl"
+                value={form.detailSourceUrl}
+                onChange={handleChange}
+                placeholder="เช่น https://sci.pnru.ac.th/program_detail.php?id=26"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pnru"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">วันที่ตรวจข้อมูล</label>
+              <input
+                name="detailSourceCheckedAt"
+                value={form.detailSourceCheckedAt}
+                onChange={handleChange}
+                placeholder="เช่น 27 ต.ค. 2569"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pnru"
+              />
+            </div>
+          </div>
+
+          {/* ปล่อยว่างไว้ได้ หน้ารายละเอียดจะใช้ลิงก์รับสมัครกลางของมหาวิทยาลัย
+              ใส่เฉพาะกรณีหลักสูตรนี้มีช่องทางรับสมัครของตัวเอง */}
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              ลิงก์สมัครเรียนเฉพาะหลักสูตรนี้ (ไม่จำเป็น)
+            </label>
+            <input
+              name="detailApplyUrl"
+              value={form.detailApplyUrl}
+              onChange={handleChange}
+              placeholder="ปล่อยว่าง = ใช้ลิงก์รับสมัครกลางของมหาวิทยาลัย"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pnru"
             />
           </div>
         </div>

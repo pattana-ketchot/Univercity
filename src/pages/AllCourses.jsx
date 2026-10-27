@@ -2,10 +2,14 @@ import { useState, useMemo, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Search, GraduationCap, Scale, Briefcase, Star, ArrowRight } from 'lucide-react'
 import { fetchSiteCourses } from '../lib/siteCourses'
+import { levelOf, byKnownOrder } from '../lib/courseLevels'
+
+const ALL_LEVELS = 'all'
 
 const AllCourses = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState('a-z')
+  const [levelFilter, setLevelFilter] = useState(ALL_LEVELS)
   const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -21,9 +25,26 @@ const AllCourses = () => {
     load()
   }, [])
 
+  // ระดับที่มีให้เลือก — สร้างจากข้อมูลจริงที่ผู้ดูแลกรอกไว้ ไม่ใช่รายการที่เขียนตายตัว
+  // ถ้าคณะยังไม่เปิดระดับใด ตัวเลือกนั้นก็ไม่ควรโผล่ให้กดแล้วได้หน้าว่าง
+  const levels = useMemo(() => {
+    const found = new Set()
+    for (const course of courses) {
+      const level = levelOf(course)
+      if (level) found.add(level)
+    }
+    return [...found].sort(byKnownOrder)
+  }, [courses])
+
   // Filter and sort courses
   const filteredCourses = useMemo(() => {
     let filtered = courses
+
+    // กรองตามระดับ — ตัดออกเท่านั้น ไม่ดึงหลักสูตรอื่นมาเติมให้ครบจำนวน
+    // หลักสูตรที่ยังไม่ได้กรอกระดับจะไม่เข้าเกณฑ์ใดเลย ซึ่งถูกต้อง
+    if (levelFilter !== ALL_LEVELS) {
+      filtered = filtered.filter((course) => levelOf(course) === levelFilter)
+    }
 
     // Filter by search query
     if (searchQuery) {
@@ -43,7 +64,7 @@ const AllCourses = () => {
     }
 
     return filtered
-  }, [courses, searchQuery, sortBy])
+  }, [courses, searchQuery, sortBy, levelFilter])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -82,8 +103,31 @@ const AllCourses = () => {
             />
           </div>
 
-          {/* Sort */}
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-end gap-4">
+          {/* Level filter + Sort */}
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            {/* ซ่อนทั้งแถวถ้ายังไม่มีหลักสูตรใดกรอกระดับไว้ — ตัวกรองที่มีตัวเลือกเดียวไม่ช่วยอะไร */}
+            {levels.length > 1 ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm text-gray-600">ระดับการศึกษา</span>
+                <select
+                  value={levelFilter}
+                  onChange={(e) => setLevelFilter(e.target.value)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pnru text-sm"
+                >
+                  <option value={ALL_LEVELS}>ทุกระดับ</option>
+                  {levels.map((level) => (
+                    <option key={level} value={level}>{level}</option>
+                  ))}
+                </select>
+                {levelFilter !== ALL_LEVELS && (
+                  <span className="text-sm text-gray-500">
+                    พบ {filteredCourses.length} หลักสูตร
+                  </span>
+                )}
+              </div>
+            ) : (
+              <span />
+            )}
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
@@ -157,7 +201,11 @@ const AllCourses = () => {
               <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
                 <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-700 mb-2">ไม่พบหลักสูตรที่ค้นหา</h3>
-                <p className="text-gray-500">ลองใช้คำค้นหาอื่น</p>
+                <p className="text-gray-500">
+                  {levelFilter !== ALL_LEVELS
+                    ? `ยังไม่มีหลักสูตรระดับ${levelFilter} ที่ตรงกับคำค้นหา — ลองเลือกทุกระดับ`
+                    : 'ลองใช้คำค้นหาอื่น'}
+                </p>
               </div>
             )}
           </div>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Scale, GraduationCap, Plus, Check, X, ArrowRight, Info } from 'lucide-react'
 import { fetchSiteCourses } from '../lib/siteCourses'
+import { levelOf } from '../lib/courseLevels'
 
 const CompareCourses = () => {
   const navigate = useNavigate()
@@ -177,6 +178,15 @@ const CompareCourses = () => {
                         <p className="text-xs text-gray-500 mb-2 text-center line-clamp-1">
                           {course.title_en}
                         </p>
+                        {/* ป้ายระดับอ่านจากข้อมูล ไม่ใช่จากวงเล็บในชื่อซึ่งผู้ดูแลแก้ได้
+                            หลักสูตรโทกับเอกคู่นี้ชื่อสาขาเหมือนกัน ถ้าชื่อถูกแก้จะแยกไม่ออก */}
+                        {levelOf(course) && (
+                          <p className="mb-2 text-center">
+                            <span className="mt-1 inline-block rounded-full bg-[#E8F5F1] px-2 py-0.5 text-[11px] font-medium text-pnru">
+                              {levelOf(course)}
+                            </span>
+                          </p>
+                        )}
                         <p className="text-xs text-gray-600 text-center line-clamp-2 mb-3 min-h-[2rem]">
                           {course.description}
                         </p>

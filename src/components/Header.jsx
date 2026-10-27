@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
+import { APPLY_URL } from '../lib/applyUrl'
 
 const Header = () => {
   const location = useLocation()
@@ -102,7 +103,7 @@ const Header = () => {
 
         {/* Apply Now Button */}
         <Link
-          to="https://admission.pnru.ac.th/info/announce"
+          to={APPLY_URL}
           className="hidden xl:inline-block ml-auto font-medium border-2 border-green-800 bg-green-800 text-white rounded-full px-4 2xl:px-5 py-1.5 2xl:py-2 text-sm 2xl:text-base whitespace-nowrap hover:bg-green-900 hover:border-green-900 transition-colors"
         >
           สมัครเรียน
@@ -149,7 +150,7 @@ const Header = () => {
             เกี่ยวกับเรา
           </a>
           <Link
-            to="https://admission.pnru.ac.th/info/announce"
+            to={APPLY_URL}
             onClick={() => setMobileMenuOpen(false)}
             className="mt-2 font-medium border-2 border-green-800 bg-green-800 text-white rounded-full px-5 py-2.5 text-center hover:bg-green-900 hover:border-green-900 transition-colors"
           >
