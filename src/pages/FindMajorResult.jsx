@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Sparkles, Loader2, RotateCcw, ArrowRight, AlertTriangle, Info, ChevronDown } from 'lucide-react'
-import { supabase, isConfigured } from '../lib/supabase'
+import { fetchSiteCourses } from '../lib/siteCourses'
 import { getFindMajorAnswers, clearFindMajorAnswers } from '../lib/findMajorAnswers'
 
 const steps = [
@@ -137,17 +137,16 @@ const FindMajorResult = () => {
     setAnswers(savedAnswers)
 
     const init = async () => {
-      if (!isConfigured) {
-        setError('ระบบยังไม่ได้เชื่อมต่อฐานข้อมูลสาขาวิชา')
+      let data = []
+      try {
+        data = await fetchSiteCourses()
+      } catch {
+        setError('ระบบยังอ่านข้อมูลสาขาวิชาไม่ได้ในขณะนี้')
         setLoading(false)
         return
       }
 
-      const { data, error: coursesError } = await supabase
-        .from('courses')
-        .select('id, title, title_en, description, careers')
-
-      if (coursesError || !data || data.length === 0) {
+      if (data.length === 0) {
         setError('ไม่พบข้อมูลสาขาวิชาในระบบ')
         setLoading(false)
         return

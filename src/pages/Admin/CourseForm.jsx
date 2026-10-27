@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
+import { apiJson } from '../../lib/apiAuth'
 import { useAdminAuth } from '../../hooks/useAdminAuth'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { useToast } from '../../components/admin/Toast'
-import { triggerIngest } from '../../lib/ragIngest'
 import { uploadFacultyPhoto, uploadCourseDocument, removeCourseFile, formatFileSize } from '../../lib/courseStorage'
 import { ArrowLeft, AlertCircle, Plus, Trash2, Upload, Loader2, FileText, User, Users, Info, FileEdit } from 'lucide-react'
 
@@ -45,6 +44,8 @@ const normalizeFaculty = (faculty) =>
     name: item?.name || '',
     nameEn: item?.nameEn || '',
     positionTh: item?.positionTh || item?.expertise || '',
+    // ตำแหน่งบริหารเพิ่มเติม เช่น ประธานสาขาวิชา — แยกจากตำแหน่งทางวิชาการ
+    roleTh: item?.roleTh || '',
     positionEn: item?.positionEn || '',
     email: item?.email || '',
     image: item?.image || '',
@@ -78,7 +79,13 @@ const CourseFormContent = ({ user }) => {
     if (!isEdit) return
 
     const fetchCourse = async () => {
-      const { data, error: fetchError } = await supabase.from('courses').select('*').eq('id', id).single()
+      let data = null
+      let fetchError = null
+      try {
+        data = await apiJson(`/api/site-admin/courses/${id}`)
+      } catch (err) {
+        fetchError = err
+      }
       if (fetchError || !data) {
         setError('ไม่พบหลักสูตรนี้')
         setLoading(false)
@@ -89,7 +96,7 @@ const CourseFormContent = ({ user }) => {
         title: data.title || '',
         title_en: data.title_en || '',
         description: data.description || '',
-        logo: data.logo || '',
+        logo: data.logo_url || '',
         careersText: (data.careers || []).join('\n'),
         detailLevel: detail.level || '',
         detailDuration: detail.duration || '',
@@ -202,6 +209,7 @@ const CourseFormContent = ({ user }) => {
         name: f.name.trim(),
         nameEn: f.nameEn.trim() || undefined,
         positionTh: f.positionTh.trim() || undefined,
+        roleTh: f.roleTh.trim() || undefined,
         positionEn: f.positionEn.trim() || undefined,
         email: f.email.trim() || undefined,
         image: f.image || undefined,
@@ -235,37 +243,33 @@ const CourseFormContent = ({ user }) => {
       title: form.title.trim(),
       title_en: form.title_en.trim(),
       description: form.description.trim(),
-      logo: form.logo.trim() || null,
+      // หลังบ้านใช้ชื่อ logo_url ส่วนฟอร์มใช้ logo มาตั้งแต่ต้น
+      logo_url: form.logo.trim() || null,
       careers: form.careersText.split('\n').map((c) => c.trim()).filter(Boolean),
       detail
     }
 
     setSaving(true)
-    const { data: saved, error: saveError } = isEdit
-      ? await supabase.from('courses').update({ ...payload, updated_by: user?.id }).eq('id', id).select('id').single()
-      : await supabase.from('courses').insert({ ...payload, created_by: user?.id, updated_by: user?.id }).select('id').single()
-    setSaving(false)
-
-    if (saveError) {
-      setError('บันทึกไม่สำเร็จ: ' + saveError.message)
+    let saved = null
+    try {
+      // ผู้แก้ไขมาจาก token ที่หลังบ้าน ไม่ต้องส่ง created_by/updated_by มาเอง
+      saved = await apiJson(
+        isEdit ? `/api/site-admin/courses/${id}` : '/api/site-admin/courses',
+        { method: isEdit ? 'PUT' : 'POST', body: JSON.stringify(payload) }
+      )
+    } catch (err) {
+      setSaving(false)
+      setError('บันทึกไม่สำเร็จ: ' + err.message)
       showToast('บันทึกไม่สำเร็จ', 'error')
       return
     }
+    setSaving(false)
 
     showToast(isEdit ? 'บันทึกการแก้ไขเรียบร้อยแล้ว' : 'เพิ่มหลักสูตรเรียบร้อยแล้ว', 'success')
 
-    // อัพเดทข้อมูลใน RAG แบบ fire-and-forget ไม่รอ ไม่บล็อกการนำทางออกจากหน้านี้
-    const courseId = saved?.id || id
-    if (courseId) {
-      const ragContent = [
-        payload.description,
-        payload.careers.length ? `อาชีพหลังจบ: ${payload.careers.join(', ')}` : '',
-        detail?.about,
-        ...highlights.map((h) => [h.title, h.description].filter(Boolean).join(' - '))
-      ].filter(Boolean).join('\n')
-
-      triggerIngest({ sourceType: 'major', sourceId: courseId, title: payload.title, content: ragContent })
-    }
+    // เดิมมีการส่งหลักสูตรเข้าดัชนี RAG ของ Supabase ตรงนี้ — เลิกแล้วใน Phase 4
+    // เพราะไม่มีที่ใดอ่านตารางนั้นเพื่อตอบคำถามเลย (ดู src/lib/ragIngest.js)
+    // คำตอบของ AI มาจากเอกสาร มคอ.2 ใน public.course_chunks ซึ่งเป็นคนละชุดกัน
 
     navigate('/admin/dashboard?tab=courses')
   }
@@ -571,7 +575,7 @@ const CourseFormContent = ({ user }) => {
             <label className="block text-sm font-medium text-gray-700">คณาจารย์</label>
             <button
               type="button"
-              onClick={() => addRow('faculty', { name: '', nameEn: '', positionTh: '', positionEn: '', email: '', image: '', image_path: '', _uploading: false })}
+              onClick={() => addRow('faculty', { name: '', nameEn: '', positionTh: '', roleTh: '', positionEn: '', email: '', image: '', image_path: '', _uploading: false })}
               className="inline-flex items-center gap-1 text-xs font-medium text-pnru hover:underline"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -621,10 +625,21 @@ const CourseFormContent = ({ user }) => {
                   placeholder="ชื่อ-นามสกุล (อังกฤษ, ไม่บังคับ)"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-pnru mb-2"
                 />
-                <input
+                {/* ตำแหน่งทางวิชาการ — ยังรองรับหลายบรรทัดเหมือนเดิม ข้อมูลเก่าที่เคาะบรรทัดไว้
+                    จึงแสดงเหมือนเดิมทุกประการ หน้าเว็บแสดงตามที่กรอก ไม่ได้แยกข้อความเอง */}
+                <textarea
                   value={row.positionTh}
                   onChange={(e) => updateRow('faculty', index, 'positionTh', e.target.value)}
-                  placeholder="ตำแหน่ง (ไทย, ไม่บังคับ)"
+                  rows={2}
+                  placeholder={'ตำแหน่งทางวิชาการ (ไทย, ไม่บังคับ)\nเช่น ผศ. หรือ รศ. ดร. — ขึ้นบรรทัดใหม่ได้'}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-center leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-pnru mb-2"
+                />
+                {/* ตำแหน่งบริหารแยกเป็นช่องของตัวเอง เพราะเป็นคนละเรื่องกับตำแหน่งทางวิชาการ
+                    แยกเก็บไว้แล้วค้นหาหรือเรียงตามบทบาทภายหลังได้ ไม่ต้องเดาจากข้อความรวม */}
+                <input
+                  value={row.roleTh}
+                  onChange={(e) => updateRow('faculty', index, 'roleTh', e.target.value)}
+                  placeholder="ตำแหน่งเสริม (ไม่บังคับ) เช่น ประธานสาขาวิชา"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-pnru mb-2"
                 />
                 <input

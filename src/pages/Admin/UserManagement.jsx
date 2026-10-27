@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAdminAuth } from '../../hooks/useAdminAuth'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { useToast } from '../../components/admin/Toast'
-import { supabase } from '../../lib/supabase'
+import { apiJson } from '../../lib/apiAuth'
 import { AlertCircle } from 'lucide-react'
 
 const ROLES = ['user', 'editor', 'admin']
@@ -25,19 +25,15 @@ const UserManagementContent = ({ currentUserId }) => {
   const fetchProfiles = useCallback(async () => {
     setLoading(true)
     setLoadError('')
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .select('id, user_id, role, status, full_name, email, created_at')
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      setLoadError('โหลดข้อมูลผู้ใช้งานไม่สำเร็จ: ' + error.message)
+    try {
+      const data = await apiJson('/api/site-admin/users')
+      // หลังบ้านใช้ตารางผู้ใช้ตารางเดียว id กับ user_id จึงเป็นค่าเดียวกัน
+      // คงสองชื่อไว้เพราะ JSX ด้านล่างอ้างทั้งคู่
+      setProfiles((data.users || []).map((u) => ({ ...u, user_id: u.id })))
+    } catch (err) {
+      setLoadError('โหลดข้อมูลผู้ใช้งานไม่สำเร็จ: ' + err.message)
       setProfiles([])
-      setLoading(false)
-      return
     }
-
-    setProfiles(data || [])
     setLoading(false)
   }, [])
 
@@ -46,9 +42,13 @@ const UserManagementContent = ({ currentUserId }) => {
   }, [fetchProfiles])
 
   const handleRoleChange = async (userId, role) => {
-    const { error } = await supabase.from('user_profiles').update({ role }).eq('user_id', userId)
-    if (error) {
-      showToast('เปลี่ยน role ไม่สำเร็จ: ' + error.message, 'error')
+    try {
+      await apiJson(`/api/site-admin/users/${userId}/role`, {
+        method: 'PUT',
+        body: JSON.stringify({ role })
+      })
+    } catch (err) {
+      showToast('เปลี่ยน role ไม่สำเร็จ: ' + err.message, 'error')
       return
     }
     showToast('เปลี่ยน role เรียบร้อยแล้ว', 'success')
@@ -56,9 +56,14 @@ const UserManagementContent = ({ currentUserId }) => {
   }
 
   const handleStatusChange = async (userId, status) => {
-    const { error } = await supabase.from('user_profiles').update({ status }).eq('user_id', userId)
-    if (error) {
-      showToast('อัปเดตสถานะไม่สำเร็จ: ' + error.message, 'error')
+    try {
+      // ถอนอนุมัติแล้วหลังบ้านจะถอนเซสชันของคนนั้นให้ด้วย ไม่ต้องรอ token หมดอายุ
+      await apiJson(`/api/site-admin/users/${userId}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ status })
+      })
+    } catch (err) {
+      showToast('อัปเดตสถานะไม่สำเร็จ: ' + err.message, 'error')
       return
     }
     showToast(status === 'approved' ? 'อนุมัติผู้ดูแลระบบเรียบร้อยแล้ว' : 'ระงับบัญชีเรียบร้อยแล้ว', 'success')

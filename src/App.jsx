@@ -16,6 +16,7 @@ import SciConnectAll from './pages/SciConnectAll'
 import SciConnectDetail from './pages/SciConnectDetail'
 import AdminLogin from './pages/Admin/Login'
 import AdminRegister from './pages/Admin/Register'
+import AdminResetPassword from './pages/Admin/ResetPassword'
 import AdminDashboard from './pages/Admin/Dashboard'
 import CourseForm from './pages/Admin/CourseForm'
 import NewsForm from './pages/Admin/NewsForm'
@@ -53,6 +54,8 @@ function App() {
         {/* Public Admin auth routes (no guard) */}
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/register" element={<AdminRegister />} />
+        {/* ปลายทางของลิงก์ที่ /auth/admin/reset-link ออกให้ — ไม่มีด่าน เพราะคนที่ใช้คือคนที่เข้าสู่ระบบไม่ได้ */}
+        <Route path="/admin/reset-password" element={<AdminResetPassword />} />
 
         {/* Protected Admin Routes — ต้องล็อกอินเป็นผู้ดูแลระบบที่อนุมัติแล้ว */}
         <Route element={<ProtectedAdminRoute />}>

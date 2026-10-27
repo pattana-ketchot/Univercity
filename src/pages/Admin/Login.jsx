@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Mail, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
-import { supabase, isConfigured } from '../../lib/supabase'
+import { login as apiLogin } from '../../lib/apiAuth'
 import {
   fetchAdminSession,
   canAccessAdminArea,
@@ -65,18 +65,19 @@ const AdminLogin = () => {
       setFieldErrors((prev) => ({ ...prev, email: 'กรอกอีเมลให้ถูกต้องก่อน แล้วกด "ลืมรหัสผ่าน?" อีกครั้ง' }))
       return
     }
-    if (!isConfigured) {
-      setFormError('ยังไม่ได้ตั้งค่า Supabase (ดู ADMIN_SETUP.md)')
+    // ตอบเหมือนกันเสมอไม่ว่าอีเมลจะมีในระบบหรือไม่ — หลังบ้านก็ตอบเหมือนกัน
+    // ถ้าต่างกัน หน้านี้จะกลายเป็นเครื่องมือตรวจว่าใครเป็นสมาชิก
+    try {
+      await fetch('/api/auth/password-reset/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+    } catch {
+      setFormError('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
       return
     }
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/admin/login`,
-    })
-    if (error) {
-      setFormError(friendlyAuthError(error))
-      return
-    }
-    setNotice(`ส่งลิงก์รีเซ็ตรหัสผ่านไปที่ ${email} แล้ว (หากมีบัญชีนี้ในระบบ)`)
+    setNotice(`ถ้ามีบัญชี ${email} ในระบบ เราได้ส่งลิงก์ตั้งรหัสผ่านใหม่ไปให้แล้ว`)
   }
 
   const handleSubmit = async (e) => {
@@ -88,22 +89,9 @@ const AdminLogin = () => {
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
 
-    if (!isConfigured) {
-      setFormError('ยังไม่ได้ตั้งค่า Supabase กรุณาดูวิธีตั้งค่าใน ADMIN_SETUP.md')
-      return
-    }
-
     setIsLoading(true)
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: form.email.trim(),
-        password: form.password,
-      })
-
-      if (error) {
-        setFormError(friendlyAuthError(error))
-        return
-      }
+      await apiLogin(form.email.trim(), form.password)
 
       // ไม่เช็ค role/status ซ้ำที่นี่ — <ProtectedAdminRoute> ที่ครอบทุกหน้า /admin/*
       // จะเป็นคนตัดสินและแสดงหน้า "รอการอนุมัติ"/"ไม่มีสิทธิ์" ที่ออกแบบไว้แล้วเอง

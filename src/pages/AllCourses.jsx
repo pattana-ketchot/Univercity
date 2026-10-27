@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Search, GraduationCap, Scale, Briefcase, Star, ArrowRight } from 'lucide-react'
-import { supabase, isConfigured } from '../lib/supabase'
+import { fetchSiteCourses } from '../lib/siteCourses'
 
 const AllCourses = () => {
   const [searchQuery, setSearchQuery] = useState('')
@@ -10,20 +10,15 @@ const AllCourses = () => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchCourses = async () => {
-      if (!isConfigured) {
-        setLoading(false)
-        return
+    const load = async () => {
+      try {
+        setCourses(await fetchSiteCourses())
+      } catch {
+        setCourses([])
       }
-      const { data } = await supabase
-        .from('courses')
-        .select('id, title, title_en, description, logo')
-        .order('title', { ascending: true })
-
-      setCourses(data || [])
       setLoading(false)
     }
-    fetchCourses()
+    load()
   }, [])
 
   // Filter and sort courses

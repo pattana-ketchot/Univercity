@@ -13,12 +13,45 @@ import {
   Users
 } from 'lucide-react'
 
+// ข้อความบอกสถานะระหว่างรอคำตอบ เปลี่ยนตามเวลาที่ผ่านไป
+//
+// คำตอบมาถึงทั้งก้อนตอนประมวลผลเสร็จ ไม่ได้ทยอยมา ผู้ใช้จึงเห็นจุดสามจุดค้างอยู่เฉย ๆ
+// โดยไม่รู้ว่าระบบยังทำงานอยู่หรือค้างไปแล้ว ยิ่งตอนบริการโมเดลภาษาตอบช้ากว่าปกติ
+// ยิ่งรอโดยไม่รู้ว่าเกิดอะไรขึ้น
+const WAIT_STAGES = [
+  { after: 0, text: 'กำลังอ่านคำถาม' },
+  { after: 3, text: 'กำลังค้นข้อมูลจากเอกสารหลักสูตร' },
+  { after: 8, text: 'กำลังเรียบเรียงคำตอบ' },
+  { after: 20, text: 'ตอนนี้ระบบ AI ตอบช้ากว่าปกติ กำลังรออยู่' },
+  { after: 45, text: 'ยังรออยู่ ระบบ AI ใช้เวลานานกว่าปกติมาก หากรอไม่ไหวลองถามใหม่อีกครั้งได้' },
+]
+
+const stageFor = (seconds) => {
+  let msg = WAIT_STAGES[0].text
+  for (const s of WAIT_STAGES) if (seconds >= s.after) msg = s.text
+  return msg
+}
+
 const ChatAdvisor = () => {
   const [messages, setMessages] = useState([])
   const [inputText, setInputText] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [waitSeconds, setWaitSeconds] = useState(0)
   const messagesContainerRef = useRef(null)
   const inputRef = useRef(null)
+
+  // นับเวลาที่รอ เพื่อเปลี่ยนข้อความสถานะ เริ่มนับใหม่ทุกครั้งที่ส่งคำถาม
+  useEffect(() => {
+    if (!isLoading) {
+      setWaitSeconds(0)
+      return
+    }
+    const started = Date.now()
+    const timer = setInterval(() => {
+      setWaitSeconds(Math.floor((Date.now() - started) / 1000))
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [isLoading])
 
   // Scroll only the chat's own message list, not scrollIntoView() — which walks
   // every scrollable ancestor (including the page itself) and was dragging the
@@ -247,12 +280,20 @@ const ChatAdvisor = () => {
                         <div className="w-8 h-8 rounded-full bg-[#E8F5F1] flex items-center justify-center flex-shrink-0">
                           <Bot className="w-5 h-5 text-pnru" />
                         </div>
-                        <div className="px-4 py-3 bg-gray-100 rounded-lg">
-                          <div className="flex gap-1">
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        <div className="px-4 py-3 bg-gray-100 rounded-lg min-w-0">
+                          <div className="flex items-center gap-2">
+                            <div className="flex gap-1 flex-shrink-0">
+                              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                            </div>
+                            <span className="text-sm text-gray-600 break-words">
+                              {stageFor(waitSeconds)}
+                            </span>
                           </div>
+                          {waitSeconds >= 3 && (
+                            <p className="mt-1 text-xs text-gray-400">รอมาแล้ว {waitSeconds} วินาที</p>
+                          )}
                         </div>
                       </div>
                     </div>

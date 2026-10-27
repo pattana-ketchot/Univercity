@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
-import { ADMIN_ROLES, canAccessAdminArea } from '../lib/adminAuth'
+import { logout as apiLogout, onAuthChange } from '../lib/apiAuth'
+import { ADMIN_ROLES, canAccessAdminArea, fetchAdminSession } from '../lib/adminAuth'
 
 // เช็ค auth + role + status ของ Admin Panel แบบรวมศูนย์ (ใช้ร่วมกันทุกหน้า Admin)
 // หมายเหตุ: เส้นทาง /admin/* ถูกกันด้วย <ProtectedAdminRoute> อีกชั้นหนึ่งแล้ว
@@ -27,22 +27,14 @@ export const useAdminAuth = ({ requireAdmin = false } = {}) => {
   const [loading, setLoading] = useState(!cacheUsable)
 
   const checkAuth = useCallback(async () => {
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    // ถามหลังบ้านทุกครั้ง — ค่าที่เก็บในเบราว์เซอร์แก้ได้ จึงใช้ตัดสินสิทธิ์ไม่ได้
+    const { user: currentUser, role: currentRole, status: currentStatus } = await fetchAdminSession()
 
     if (!currentUser) {
       sessionCache = null
       navigate('/admin/login')
       return
     }
-
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('role, status')
-      .eq('user_id', currentUser.id)
-      .single()
-
-    const currentRole = profile?.role || 'user'
-    const currentStatus = profile?.status || 'approved'
 
     // ไม่ใช่ผู้ดูแลระบบ หรือยังไม่ได้รับอนุมัติ -> กลับไปหน้า login
     if (!canAccessAdminArea(currentRole, currentStatus)) {
@@ -66,21 +58,22 @@ export const useAdminAuth = ({ requireAdmin = false } = {}) => {
     // มีแคช -> เรนเดอร์ทันทีจากแคช แล้ว revalidate เงียบ ๆ / ไม่มีแคช -> ตรวจพร้อมจอโหลด
     checkAuth()
 
-    // ออกจากระบบจากแท็บอื่น / token หมดอายุ -> ตรวจซ้ำ
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_OUT') {
+    // ออกจากระบบจากแท็บอื่น / เซสชันถูกเพิกถอน -> ตรวจซ้ำ
+    const stop = onAuthChange((user) => {
+      if (!user) {
         sessionCache = null
         navigate('/admin/login')
+      } else {
+        checkAuth()
       }
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') checkAuth()
     })
 
-    return () => sub?.subscription?.unsubscribe()
+    return () => stop()
   }, [checkAuth, navigate])
 
   const logout = async () => {
     sessionCache = null
-    await supabase.auth.signOut()
+    await apiLogout()
     navigate('/admin/login')
   }
 

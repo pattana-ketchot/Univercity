@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Scale, GraduationCap, Plus, Check, X, ArrowRight, Info } from 'lucide-react'
-import { supabase, isConfigured } from '../lib/supabase'
+import { fetchSiteCourses } from '../lib/siteCourses'
 
 const CompareCourses = () => {
   const navigate = useNavigate()
@@ -12,20 +12,15 @@ const CompareCourses = () => {
   const MIN_SELECTION = 2
 
   useEffect(() => {
-    const fetchCourses = async () => {
-      if (!isConfigured) {
-        setLoading(false)
-        return
+    const load = async () => {
+      try {
+        setCourses(await fetchSiteCourses())
+      } catch {
+        setCourses([])
       }
-      const { data } = await supabase
-        .from('courses')
-        .select('id, title, title_en, description, logo')
-        .order('title', { ascending: true })
-
-      setCourses(data || [])
       setLoading(false)
     }
-    fetchCourses()
+    load()
   }, [])
 
   const handleToggleCourse = (courseId) => {

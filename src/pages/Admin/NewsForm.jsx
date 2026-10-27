@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
+import { apiJson } from '../../lib/apiAuth'
 import { useAdminAuth } from '../../hooks/useAdminAuth'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { useToast } from '../../components/admin/Toast'
-import { triggerIngest } from '../../lib/ragIngest'
 import { ArrowLeft, AlertCircle } from 'lucide-react'
 
 const CATEGORIES = ['ข่าวรับสมัคร', 'กิจกรรม', 'ทุนการศึกษา', 'ประกาศ']
@@ -30,7 +29,13 @@ const NewsFormContent = ({ user }) => {
     if (!isEdit) return
 
     const fetchNews = async () => {
-      const { data, error: fetchError } = await supabase.from('news').select('*').eq('id', id).single()
+      let data = null
+      let fetchError = null
+      try {
+        data = await apiJson(`/api/site-admin/news/${id}`)
+      } catch (err) {
+        fetchError = err
+      }
       if (fetchError || !data) {
         setError('ไม่พบข่าวนี้')
         setLoading(false)
@@ -40,8 +45,9 @@ const NewsFormContent = ({ user }) => {
         title: data.title || '',
         description: data.description || '',
         category: data.category || CATEGORIES[0],
-        date: data.date || '',
-        image: data.image || '',
+        // หลังบ้านใช้ชื่อ published_on และ image_url ส่วนฟอร์มใช้ date กับ image
+        date: data.published_on || '',
+        image: data.image_url || '',
         status: data.status || 'draft'
       })
       setLoading(false)
@@ -63,38 +69,31 @@ const NewsFormContent = ({ user }) => {
       title: form.title.trim(),
       description: form.description.trim(),
       category: form.category,
-      date: form.date,
-      image: form.image.trim() || null,
+      // หลังบ้านใช้ชื่อ published_on และ image_url
+      published_on: form.date || null,
+      image_url: form.image.trim() || null,
       status: form.status
     }
 
     setSaving(true)
-    const { data: saved, error: saveError } = isEdit
-      ? await supabase.from('news').update({ ...payload, updated_by: user?.id }).eq('id', id).select('id').single()
-      : await supabase.from('news').insert({ ...payload, created_by: user?.id, updated_by: user?.id }).select('id').single()
-    setSaving(false)
-
-    if (saveError) {
-      setError('บันทึกไม่สำเร็จ: ' + saveError.message)
+    try {
+      // ผู้แก้ไขมาจาก token ที่หลังบ้าน ไม่ต้องส่ง created_by/updated_by มาเอง
+      await apiJson(
+        isEdit ? `/api/site-admin/news/${id}` : '/api/site-admin/news',
+        { method: isEdit ? 'PUT' : 'POST', body: JSON.stringify(payload) }
+      )
+    } catch (err) {
+      setSaving(false)
+      setError('บันทึกไม่สำเร็จ: ' + err.message)
       showToast('บันทึกไม่สำเร็จ', 'error')
       return
     }
+    setSaving(false)
 
     showToast(isEdit ? 'บันทึกการแก้ไขเรียบร้อยแล้ว' : 'เพิ่มข่าวเรียบร้อยแล้ว', 'success')
 
-    // อัพเดทข้อมูลใน RAG แบบ fire-and-forget — เฉพาะข่าวที่เผยแพร่แล้วเท่านั้นที่ให้ AI ค้นเจอได้
-    // (ตรงกับ RLS ของตาราง news ที่คนทั่วไปเห็นแค่ข่าว published เหมือนกัน)
-    const newsId = saved?.id || id
-    if (newsId) {
-      if (payload.status === 'published') {
-        triggerIngest({ sourceType: 'news', sourceId: newsId, title: payload.title, content: payload.description })
-      } else {
-        supabase.from('rag_documents').delete().eq('source_type', 'news').eq('source_id', newsId)
-          .then(({ error: cleanupError }) => {
-            if (cleanupError) console.error('[NewsForm] failed to remove RAG chunks for unpublished news', cleanupError)
-          })
-      }
-    }
+    // เดิมมีการส่งข่าวเข้าดัชนี RAG ของ Supabase ตรงนี้ — เลิกแล้วใน Phase 4
+    // เพราะไม่มีที่ใดอ่านตารางนั้นเพื่อตอบคำถามเลย (ดู src/lib/ragIngest.js)
 
     navigate('/admin/dashboard?tab=news')
   }

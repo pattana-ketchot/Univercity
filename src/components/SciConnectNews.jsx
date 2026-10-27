@@ -10,7 +10,9 @@ const SciConnectNews = () => {
   useEffect(() => {
     let cancelled = false
 
-    fetch('/api/sci-connect-news')
+    // อ่านจาก backend ของเราเอง (web.external_news) ไม่ใช่ /api/sci-connect-news
+    // ซึ่งเป็นของ webapi ที่ยังอ่าน Supabase อยู่ — ดู test/noSupabase.test.mjs
+    fetch('/api/site/external-news')
       .then((res) => {
         if (!res.ok) throw new Error('request failed')
         return res.json()

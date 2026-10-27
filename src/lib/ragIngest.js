@@ -1,29 +1,14 @@
-import { supabase } from './supabase'
-
-// เรียกหลังบันทึก Course/News สำเร็จ เพื่อ chunk + embed + เก็บเข้า rag_documents
-// ทำงานฝั่ง server ทั้งหมด (ต้องไม่สร้าง embedding ที่ client) — เรียกแบบ fire-and-forget
-// ไม่ throw ถ้าพัง แค่ log ไว้ ไม่ให้กระทบการบันทึกหลักของฟอร์ม
-export const triggerIngest = async ({ sourceType, sourceId, title, content }) => {
-  try {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return false
-
-    const response = await fetch('/api/admin/ingest', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`
-      },
-      body: JSON.stringify({ sourceType, sourceId, title, content })
-    })
-
-    if (!response.ok) {
-      console.error('[ragIngest] ingest failed', await response.text().catch(() => ''))
-      return false
-    }
-    return true
-  } catch (err) {
-    console.error('[ragIngest] ingest failed', err)
-    return false
-  }
-}
+// เดิมเรียก /api/admin/ingest เพื่อ chunk + embed เนื้อหาข่าวและคลังความรู้เก็บลง
+// ตาราง rag_documents ของ Supabase — Phase 4 เลิกใช้แล้ว
+//
+// เหตุผล: ตรวจโค้ดทั้งสองรีโปแล้ว **ไม่มีที่ใดอ่าน rag_documents เพื่อตอบคำถามเลย**
+// ฟังก์ชันเดียวที่อ่านคือ searchRelevantContext() ใน api/_lib/rag.js ซึ่งถูก export
+// ไว้แต่ไม่เคยถูกเรียกจากที่ไหน
+//
+// คำตอบของ AI ทั้งหมดมาจาก FastAPI ที่ค้นจาก public.course_chunks (bge-m3 1024 มิติ)
+// ซึ่งสร้างจากเอกสาร มคอ.2 ด้วย pipeline คนละตัว การเลิกเขียน rag_documents จึง
+// ไม่กระทบคำตอบแม้แต่ข้อเดียว
+//
+// ถ้าภายหลังต้องการให้ข่าวและคลังความรู้ค้นหาได้ด้วย ต้องนำเข้าผ่าน pipeline ของ
+// FastAPI ไม่ใช่ปลุกเส้นทางเดิมขึ้นมา — เป็นงานแยกที่ต้องวัดคุณภาพคำตอบใหม่
+export const triggerIngest = async () => false

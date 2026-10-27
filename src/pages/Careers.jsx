@@ -1,28 +1,42 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Star, Lightbulb, Briefcase, GraduationCap, ArrowRight } from 'lucide-react'
-import { supabase, isConfigured } from '../lib/supabase'
+import { Star, Lightbulb, Briefcase, GraduationCap, ArrowRight, FileText } from 'lucide-react'
+import { fetchSiteCourses } from '../lib/siteCourses'
+import { mergeCareers, byCareersThenTitle } from '../lib/careerMerge'
 
 const Careers = () => {
   const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     const fetchCourses = async () => {
-      if (!isConfigured) {
+      // ข้อผิดพลาดต้องโผล่ ไม่ใช่กลืนแล้วเห็นหน้าว่างโดยไม่มีอะไรบอกว่าเกิดอะไรขึ้น
+      let data = []
+      try {
+        data = await fetchSiteCourses()
+      } catch {
+        setError('ไม่สามารถโหลดรายการหลักสูตรได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง')
         setLoading(false)
         return
       }
-      const { data } = await supabase
-        .from('courses')
-        .select('id, title, title_en, logo, careers')
-        .order('title', { ascending: true })
 
-      setCourses((data || []).filter((c) => c.careers && c.careers.length > 0))
+      // ล้มเหลวตรงนี้ต้องไม่ทำให้ทั้งหน้าล้ม — ยังแสดงหลักสูตรได้ เพียงไม่มีรายการอาชีพ
+      let programmes = []
+      try {
+        const res = await fetch('/api/career-lists')
+        if (res.ok) programmes = (await res.json()).programmes || []
+      } catch {
+        /* ไม่มีรายการอาชีพก็แสดงเท่าที่มี */
+      }
+
+      setCourses(mergeCareers(data, programmes).sort(byCareersThenTitle))
       setLoading(false)
     }
     fetchCourses()
   }, [])
+
+  const withCareers = courses.filter((c) => c.careers.length > 0).length
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -40,9 +54,15 @@ const Careers = () => {
           {/* Info Banner */}
           <div className="bg-[#E8F5F1] border border-pnru/20 rounded-lg p-4 flex items-start gap-3">
             <Lightbulb className="w-6 h-6 text-pnru flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-gray-700">
-              อาชีพที่แสดงเป็นเพียงตัวอย่าง สามารถประกอบอาชีพอื่น ๆ เพิ่มเติมตามความถนัดและความสนใจได้
-            </p>
+            <div className="text-sm text-gray-700">
+              <p>อาชีพที่แสดงเป็นเพียงตัวอย่าง สามารถประกอบอาชีพอื่น ๆ เพิ่มเติมตามความถนัดและความสนใจได้</p>
+              {/* บอกความครอบคลุมตามจริง ไม่ให้เข้าใจว่าทุกหลักสูตรมีรายการครบแล้ว */}
+              {!loading && !error && courses.length > 0 && (
+                <p className="mt-1 text-xs text-gray-600">
+                  ขณะนี้มีรายการอาชีพที่ตรวจกับเอกสารหลักสูตรแล้ว {withCareers} จาก {courses.length} หลักสูตร
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
@@ -53,6 +73,11 @@ const Careers = () => {
             {loading ? (
               <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-500">
                 กำลังโหลดข้อมูล...
+              </div>
+            ) : error ? (
+              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                <GraduationCap className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-600">{error}</p>
               </div>
             ) : courses.length === 0 ? (
               <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
@@ -93,18 +118,43 @@ const Careers = () => {
 
                       {/* Career List */}
                       <div className="mb-4 flex-1">
-                        <ul className="space-y-1.5">
-                          {course.careers.map((career, idx) => (
-                            <li key={idx} className="text-sm text-gray-600 flex items-start gap-2">
-                              <span className="text-pnru mt-1 flex-shrink-0">•</span>
-                              <span className="leading-tight">{career}</span>
-                            </li>
-                          ))}
-                        </ul>
+                        {course.careers.length > 0 ? (
+                          <ul className="space-y-1.5">
+                            {course.careers.map((career, idx) => (
+                              <li key={idx} className="text-sm text-gray-600 flex items-start gap-2">
+                                <span className="text-pnru mt-1 flex-shrink-0">•</span>
+                                <span className="leading-tight">{career}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          /* บอกตรงๆ ว่ายังไม่มีรายการที่ตรวจแล้ว ดีกว่าซ่อนหลักสูตรทิ้งหรือเดารายการขึ้นมาเอง */
+                          <p className="text-sm text-gray-500 leading-relaxed">
+                            ยังไม่มีรายการอาชีพที่ตรวจกับเอกสารหลักสูตรแล้ว
+                            <br />
+                            ดูแนวทางอาชีพได้จากคำอธิบายในหน้ารายละเอียด
+                          </p>
+                        )}
                       </div>
+
+                      {/* ที่มาของรายการ — ส่งมาเฉพาะเมื่อรู้เอกสารจริง จึงไม่มีลิงก์ที่เปิดไม่ได้ */}
+                      {course.source?.document_id && (
+                        <a
+                          href={`/api/documents/${course.source.document_id}/pdf#page=${course.source.page_start}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mb-3 flex items-center gap-1.5 text-xs text-pnru hover:underline"
+                        >
+                          <FileText className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
+                          <span className="min-w-0 break-words text-left">
+                            ที่มา: {course.source.file} หน้า {course.source.page_start}
+                          </span>
+                        </a>
+                      )}
 
                       {/* Divider */}
                       <hr className="border-gray-200 mb-3" />
+
 
                       {/* Link */}
                       <Link

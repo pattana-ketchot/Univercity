@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAdminAuth } from '../../hooks/useAdminAuth'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { useToast } from '../../components/admin/Toast'
-import { supabase } from '../../lib/supabase'
+import { apiJson } from '../../lib/apiAuth'
 import { Sparkles, AlertCircle, Save } from 'lucide-react'
 
 const AiSettingsContent = () => {
@@ -16,16 +16,13 @@ const AiSettingsContent = () => {
   const fetchSettings = useCallback(async () => {
     setLoading(true)
     setLoadError('')
-    const { data, error } = await supabase.from('ai_settings').select('model').eq('id', 1).single()
-
-    if (error) {
-      setLoadError('โหลดค่าตั้งต้นไม่สำเร็จ (อาจยังไม่ได้รัน supabase_migration_ai_settings.sql): ' + error.message)
-      setLoading(false)
-      return
+    try {
+      const data = await apiJson('/api/site-admin/ai-settings')
+      setModel(data?.model || '')
+      setSavedModel(data?.model || '')
+    } catch (err) {
+      setLoadError('โหลดค่าตั้งต้นไม่สำเร็จ: ' + err.message)
     }
-
-    setModel(data?.model || '')
-    setSavedModel(data?.model || '')
     setLoading(false)
   }, [])
 
@@ -40,17 +37,18 @@ const AiSettingsContent = () => {
     }
 
     setSaving(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    const { error } = await supabase
-      .from('ai_settings')
-      .update({ model: model.trim(), updated_at: new Date().toISOString(), updated_by: user?.id })
-      .eq('id', 1)
-    setSaving(false)
-
-    if (error) {
-      showToast('บันทึกไม่สำเร็จ: ' + error.message, 'error')
+    try {
+      // หลังบ้านบันทึกผู้แก้ไขและเวลาจาก token เอง หน้าเว็บไม่ต้องส่งมา
+      await apiJson('/api/site-admin/ai-settings', {
+        method: 'PUT',
+        body: JSON.stringify({ model: model.trim() })
+      })
+    } catch (err) {
+      setSaving(false)
+      showToast('บันทึกไม่สำเร็จ: ' + err.message, 'error')
       return
     }
+    setSaving(false)
 
     setSavedModel(model.trim())
     showToast('บันทึกโมเดล AI เรียบร้อยแล้ว', 'success')

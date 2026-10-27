@@ -1,32 +1,50 @@
-import { supabase } from './supabase'
+import { apiFetch, getAccessToken } from './apiAuth'
 
-const BUCKET = 'knowledge-files'
+// ไฟล์แนบของคลังความรู้ — Phase 4 (มาแทน Supabase Storage bucket `knowledge-files`)
+//
+// ของเดิม bucket นี้เป็นแบบ **private** และใช้ signed URL อายุหนึ่งชั่วโมง
+// ที่นี่ยังคงความเป็นส่วนตัวไว้: หมวด `knowledge` ต้องเข้าสู่ระบบเป็นผู้ดูแลก่อนจึงเปิดได้
+// (ดู backend/app/api/routes/uploads.py) การเปิดเป็นสาธารณะตอนย้ายจะเป็นการลด
+// ความปลอดภัยโดยไม่ได้ตั้งใจ
 
-// อัปโหลดไฟล์ต้นฉบับ (.pdf/.docx/.txt/.md) ที่แนบมากับข้อมูลความรู้ ไปเก็บใน Supabase Storage
-// path ตั้งเป็น uuid ของตัวเองแยกจาก knowledge_articles.id เพราะยังไม่รู้ id ตอนสร้างใหม่
 export const uploadKnowledgeFile = async (file) => {
-  const ext = (file.name.split('.').pop() || 'bin').toLowerCase()
-  const path = `${crypto.randomUUID()}.${ext}`
+  const form = new FormData()
+  form.append('file', file)
 
-  const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
-    contentType: file.type || undefined,
-    upsert: false
-  })
+  const res = await apiFetch('/api/uploads/knowledge', { method: 'POST', body: form })
+  let data = null
+  try {
+    data = await res.json()
+  } catch {
+    data = null
+  }
+  if (!res.ok) throw new Error(data?.detail || 'อัปโหลดไฟล์ไม่สำเร็จ')
 
-  if (error) throw new Error(error.message || 'อัปโหลดไฟล์ไม่สำเร็จ')
-  return { path, name: file.name, size: file.size }
+  return { path: data.file_path, name: data.file_name, size: data.file_size }
 }
 
-// สร้างลิงก์ดาวน์โหลดชั่วคราว (bucket เป็น private ไม่มี public URL ตรงๆ)
+/**
+ * เปิดไฟล์แนบ
+ *
+ * ต่างจากของเดิมตรงที่ไม่มี signed URL ให้เปิดตรง ๆ ได้ เพราะด่านอยู่ที่ token
+ * จึงต้องดึงไฟล์มาแล้วสร้าง URL ชั่วคราวในเบราว์เซอร์
+ *
+ * ผู้เรียกต้องเรียก revokeKnowledgeFileUrl() เมื่อใช้เสร็จ ไม่งั้นหน่วยความจำค้าง
+ */
 export const getKnowledgeFileUrl = async (path) => {
-  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600)
-  if (error) throw new Error(error.message || 'สร้างลิงก์ไฟล์ไม่สำเร็จ')
-  return data.signedUrl
+  if (!path) throw new Error('ไม่พบไฟล์')
+  if (!getAccessToken()) throw new Error('ต้องเข้าสู่ระบบก่อนจึงจะเปิดไฟล์ได้')
+
+  const res = await apiFetch(`/api/uploads/${path}`)
+  if (!res.ok) {
+    throw new Error(res.status === 403 ? 'ไม่มีสิทธิ์เปิดไฟล์นี้' : 'เปิดไฟล์ไม่สำเร็จ')
+  }
+  return URL.createObjectURL(await res.blob())
 }
 
-// fire-and-forget ใช้ตอนลบ/แทนที่ไฟล์เดิม ไม่ให้ไฟล์ค้างใน storage โดยไม่มีอะไรอ้างอิงถึง
-export const removeKnowledgeFile = async (path) => {
-  if (!path) return
-  const { error } = await supabase.storage.from(BUCKET).remove([path])
-  if (error) console.error('[knowledgeStorage] failed to remove file', error)
+export const revokeKnowledgeFileUrl = (url) => {
+  if (url) URL.revokeObjectURL(url)
 }
+
+// ไฟล์ตั้งชื่อตาม hash ของเนื้อไฟล์ จึงใช้ร่วมกันได้หลายที่ — ดูเหตุผลใน courseStorage.js
+export const removeKnowledgeFile = async () => {}

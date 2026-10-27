@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react'
 import { GraduationCap, Briefcase, Database, ShieldCheck } from 'lucide-react'
-import { supabase, isConfigured } from '../lib/supabase'
+import { fetchSiteCourses } from '../lib/siteCourses'
 import Reveal from './Reveal'
 
 const StatItem = ({ item }) => {
@@ -30,11 +30,11 @@ const HomeQuickLinks = () => {
 
   useEffect(() => {
     const fetchCount = async () => {
-      if (!isConfigured) return
-      const { count } = await supabase
-        .from('courses')
-        .select('*', { count: 'exact', head: true })
-      setTotalCourses(count || 0)
+      try {
+        setTotalCourses((await fetchSiteCourses()).length)
+      } catch {
+        // นับไม่ได้ก็ไม่ต้องแสดงตัวเลข ดีกว่าแสดง 0 ซึ่งอ่านว่า "ไม่มีหลักสูตร"
+      }
     }
     fetchCount()
   }, [])

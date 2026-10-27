@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { supabase, fetchProfilesByUserIds } from '../../lib/supabase'
+import { apiJson } from '../../lib/apiAuth'
 import { useAdminAuth } from '../../hooks/useAdminAuth'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { useToast } from '../../components/admin/Toast'
@@ -23,37 +23,17 @@ const KnowledgeBaseContent = ({ canEdit, isAdmin }) => {
   const fetchArticles = useCallback(async () => {
     setLoading(true)
     setLoadError('')
-    const { data, error } = await supabase.from('knowledge_articles').select('*').order('created_at', { ascending: false })
-
-    if (error) {
-      setLoadError('โหลดข้อมูลความรู้ไม่สำเร็จ (อาจยังไม่ได้รัน supabase_migration_knowledge.sql): ' + error.message)
+    try {
+      const data = await apiJson('/api/site-admin/knowledge')
+      setArticles(data.articles || [])
+    } catch (err) {
+      setLoadError('โหลดข้อมูลความรู้ไม่สำเร็จ: ' + err.message)
       setArticles([])
-      setLoading(false)
-      return
     }
 
-    const ids = (data || []).flatMap((a) => [a.created_by, a.updated_by])
-    const profileMap = await fetchProfilesByUserIds(ids)
-
-    setArticles((data || []).map((a) => ({
-      ...a,
-      creator: profileMap[a.created_by],
-      updater: profileMap[a.updated_by]
-    })))
-
-    // เช็คว่า article ไหนถูก ingest เข้า rag_documents แล้วบ้าง (แสดงสถานะซิงค์)
-    const sourceIds = (data || []).map((a) => a.id)
-    if (sourceIds.length > 0) {
-      const { data: ragRows } = await supabase
-        .from('rag_documents')
-        .select('source_id')
-        .eq('source_type', 'knowledge')
-        .in('source_id', sourceIds)
-      setSyncedIds(new Set((ragRows || []).map((r) => r.source_id)))
-    } else {
-      setSyncedIds(new Set())
-    }
-
+    // เดิมแสดงสถานะว่าบทความถูกส่งเข้าดัชนี RAG ของ Supabase แล้วหรือยัง
+    // Phase 4 เลิกใช้ดัชนีนั้นแล้วเพราะไม่มีที่ใดอ่านเพื่อตอบคำถาม จึงไม่มีสถานะให้แสดง
+    setSyncedIds(new Set())
     setLoading(false)
   }, [])
 
@@ -75,23 +55,19 @@ const KnowledgeBaseContent = ({ canEdit, isAdmin }) => {
   const handleConfirmDelete = async () => {
     if (!isAdmin) return
     setDeleting(true)
-    const { error } = await supabase.from('knowledge_articles').delete().eq('id', confirmState.id)
+    try {
+      await apiJson(`/api/site-admin/knowledge/${confirmState.id}`, { method: 'DELETE' })
+    } catch (err) {
+      setDeleting(false)
+      closeConfirm()
+      showToast('ลบไม่สำเร็จ: ' + err.message, 'error')
+      return
+    }
     setDeleting(false)
     closeConfirm()
 
-    if (error) {
-      showToast('ลบไม่สำเร็จ: ' + error.message, 'error')
-      return
-    }
-
     showToast('ลบข้อมูลความรู้เรียบร้อยแล้ว', 'success')
     fetchArticles()
-
-    // ลบ chunk ที่เกี่ยวข้องออกจาก RAG ด้วย กัน AI อ้างอิงข้อมูลที่ถูกลบไปแล้ว (fire-and-forget)
-    supabase.from('rag_documents').delete().eq('source_type', 'knowledge').eq('source_id', confirmState.id)
-      .then(({ error: cleanupError }) => {
-        if (cleanupError) console.error('[KnowledgeBase] failed to remove RAG chunks after delete', cleanupError)
-      })
 
     // ลบไฟล์ต้นฉบับออกจาก Storage ด้วย (fire-and-forget)
     if (confirmState.filePath) removeKnowledgeFile(confirmState.filePath)

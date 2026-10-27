@@ -10,18 +10,23 @@ const SciConnectDetail = () => {
   useEffect(() => {
     let cancelled = false
 
-    fetch(`/api/sci-connect-news-detail?slug=${encodeURIComponent(slug)}`)
+    // อ่านจาก backend ของเราเอง ไม่ใช่ webapi ที่ยังอ่าน Supabase
+    //
+    // เส้นทางใหม่คืนตัวข่าวตรง ๆ ไม่ได้ห่อใน { item } และตอบ 404 เมื่อไม่พบ
+    // จึงต้องแยก 404 ออกจากข้อผิดพลาดอื่น ไม่งั้นข่าวที่ไม่มีจะขึ้นว่า "ระบบมีปัญหา"
+    fetch(`/api/site/external-news/${encodeURIComponent(slug)}`)
       .then((res) => {
+        if (res.status === 404) return null
         if (!res.ok) throw new Error('request failed')
         return res.json()
       })
       .then((data) => {
         if (cancelled) return
-        if (!data.item) {
+        if (!data || !data.slug) {
           setStatus('not-found')
           return
         }
-        setItem(data.item)
+        setItem(data)
         setStatus('ready')
       })
       .catch(() => {

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAdminAuth } from '../../hooks/useAdminAuth'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { useToast } from '../../components/admin/Toast'
-import { supabase } from '../../lib/supabase'
+import { apiJson } from '../../lib/apiAuth'
 import { PASSWORD_MIN, friendlyAuthError } from '../../lib/adminAuth'
 import AdminAuthInput from '../../components/admin/auth/AdminAuthInput'
 import PasswordInput from '../../components/admin/auth/PasswordInput'
@@ -17,13 +17,18 @@ const ProfileContent = ({ user, role }) => {
   const [savingProfile, setSavingProfile] = useState(false)
   const [savingPassword, setSavingPassword] = useState(false)
   const [profileError, setProfileError] = useState('')
-  const [passwords, setPasswords] = useState({ password: '', confirmPassword: '' })
+  const [passwords, setPasswords] = useState({ currentPassword: '', password: '', confirmPassword: '' })
   const [passwordErrors, setPasswordErrors] = useState({})
 
   useEffect(() => {
     let active = true
     const fetchProfile = async () => {
-      const { data } = await supabase.from('user_profiles').select('full_name').eq('user_id', user.id).single()
+      let data = null
+      try {
+        data = await apiJson('/api/auth/me')
+      } catch {
+        data = null
+      }
       if (active) {
         setFullName(data?.full_name || '')
         setLoading(false)
@@ -43,19 +48,24 @@ const ProfileContent = ({ user, role }) => {
     }
     setProfileError('')
     setSavingProfile(true)
-    const { error } = await supabase.from('user_profiles').update({ full_name: fullName.trim() }).eq('user_id', user.id)
-    setSavingProfile(false)
-
-    if (error) {
-      showToast('บันทึกไม่สำเร็จ: ' + error.message, 'error')
+    try {
+      await apiJson('/api/auth/me', {
+        method: 'PUT',
+        body: JSON.stringify({ full_name: fullName.trim() })
+      })
+    } catch (err) {
+      setSavingProfile(false)
+      showToast('บันทึกไม่สำเร็จ: ' + err.message, 'error')
       return
     }
+    setSavingProfile(false)
     showToast('บันทึกโปรไฟล์เรียบร้อยแล้ว', 'success')
   }
 
   const handleChangePassword = async (e) => {
     e.preventDefault()
     const errors = {}
+    if (!passwords.currentPassword) errors.currentPassword = 'กรุณากรอกรหัสผ่านเดิม'
     if (!passwords.password) errors.password = 'กรุณากรอกรหัสผ่านใหม่'
     else if (passwords.password.length < PASSWORD_MIN) errors.password = `รหัสผ่านต้องมีอย่างน้อย ${PASSWORD_MIN} ตัวอักษร`
     if (!passwords.confirmPassword) errors.confirmPassword = 'กรุณายืนยันรหัสผ่านใหม่'
@@ -65,14 +75,22 @@ const ProfileContent = ({ user, role }) => {
     if (Object.keys(errors).length > 0) return
 
     setSavingPassword(true)
-    const { error } = await supabase.auth.updateUser({ password: passwords.password })
-    setSavingPassword(false)
-
-    if (error) {
-      showToast(friendlyAuthError(error), 'error')
+    try {
+      // ต้องใส่รหัสผ่านเดิมด้วย — หลังบ้านบังคับไว้ กันคนที่ยืมเครื่องที่เปิดค้างยึดบัญชี
+      await apiJson('/api/auth/password/change', {
+        method: 'POST',
+        body: JSON.stringify({
+          current_password: passwords.currentPassword,
+          new_password: passwords.password
+        })
+      })
+    } catch (err) {
+      setSavingPassword(false)
+      showToast(friendlyAuthError(err), 'error')
       return
     }
-    setPasswords({ password: '', confirmPassword: '' })
+    setSavingPassword(false)
+    setPasswords({ currentPassword: '', password: '', confirmPassword: '' })
     showToast('เปลี่ยนรหัสผ่านเรียบร้อยแล้ว', 'success')
   }
 
@@ -119,6 +137,18 @@ const ProfileContent = ({ user, role }) => {
 
       <form onSubmit={handleChangePassword} className="bg-white rounded-xl border border-gray-200 p-6 lg:p-8 space-y-5">
         <h3 className="text-base font-bold text-gray-900">เปลี่ยนรหัสผ่าน</h3>
+
+        {/* ต้องใส่รหัสผ่านเดิม — หลังบ้านบังคับไว้ กันคนที่ยืมเครื่องที่เปิดค้างยึดบัญชี */}
+        <PasswordInput
+          label="รหัสผ่านเดิม"
+          placeholder="รหัสผ่านที่ใช้อยู่ตอนนี้"
+          value={passwords.currentPassword}
+          onChange={(e) => {
+            setPasswords((prev) => ({ ...prev, currentPassword: e.target.value }))
+            setPasswordErrors((prev) => ({ ...prev, currentPassword: undefined }))
+          }}
+          error={passwordErrors.currentPassword}
+        />
 
         <PasswordInput
           label="รหัสผ่านใหม่"

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Loader2, ShieldAlert, Clock } from 'lucide-react'
-import { supabase } from '../../../lib/supabase'
+import { logout, onAuthChange } from '../../../lib/apiAuth'
 import { fetchAdminSession, canAccessAdminArea, ADMIN_ROLES } from '../../../lib/adminAuth'
 
 // การ์ดกันเส้นทาง /admin/* — ตรวจ session + role/status จาก Supabase (ฝั่ง DB เป็นตัวตัดสิน)
@@ -22,20 +22,20 @@ const ProtectedAdminRoute = () => {
     }
     check()
 
-    // ออกจากระบบจากแท็บอื่น / token หมดอายุ -> ตรวจซ้ำ
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_OUT') setState({ loading: false, user: null, role: null, status: null })
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') check()
+    // ออกจากระบบจากแท็บอื่น / เซสชันถูกเพิกถอน -> ตรวจซ้ำ
+    const stop = onAuthChange((user) => {
+      if (!user) setState({ loading: false, user: null, role: null, status: null })
+      else check()
     })
 
     return () => {
       active = false
-      sub?.subscription?.unsubscribe()
+      stop()
     }
   }, [])
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
+    await logout()
     navigate('/admin/login', { replace: true })
   }
 

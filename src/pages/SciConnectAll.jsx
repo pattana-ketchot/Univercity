@@ -9,7 +9,8 @@ const SciConnectAll = () => {
   useEffect(() => {
     let cancelled = false
 
-    fetch('/api/sci-connect-news?limit=15')
+    // อ่านจาก backend ของเราเอง ไม่ใช่ webapi ที่ยังอ่าน Supabase
+    fetch('/api/site/external-news?limit=15')
       .then((res) => {
         if (!res.ok) throw new Error('request failed')
         return res.json()

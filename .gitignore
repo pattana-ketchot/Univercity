@@ -31,3 +31,6 @@ dist-ssr
 *.sln
 *.sw?
 .env*
+
+# เครื่องมือของผู้พัฒนาแต่ละคน ไม่ใช่ของโปรเจกต์
+.claude/settings.local.json

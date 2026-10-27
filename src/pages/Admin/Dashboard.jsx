@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { supabase, fetchProfilesByUserIds } from '../../lib/supabase'
+import { apiJson } from '../../lib/apiAuth'
+import { DELETE_TARGETS, matchesNewsQuery } from '../../lib/adminDeletable'
 import { useAdminAuth } from '../../hooks/useAdminAuth'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { useToast } from '../../components/admin/Toast'
@@ -54,36 +55,49 @@ const DashboardContent = ({ activeTab, canEdit, isAdmin }) => {
   const showToast = useToast()
 
   const [courses, setCourses] = useState([])
+  const [news, setNews] = useState([])
   const [sciConnectNews, setSciConnectNews] = useState([])
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState('')
   const [overview, setOverview] = useState(null)
   const [overviewLoading, setOverviewLoading] = useState(false)
   const [courseSearch, setCourseSearch] = useState('')
-  const [confirmState, setConfirmState] = useState({ open: false, id: null })
+  const [newsSearch, setNewsSearch] = useState('')
+  // kind บอกว่ากำลังลบอะไร — ต้องมี เพราะการลบข่าวกับลบหลักสูตรล้าง chunk ของ RAG
+  // ด้วย source_type ต่างกัน ('news' กับ 'major') ลบผิดชนิดคือล้างของผิดก้อน
+  const [confirmState, setConfirmState] = useState({ open: false, id: null, kind: 'course' })
   const [deleting, setDeleting] = useState(false)
   const [syncingSciConnect, setSyncingSciConnect] = useState(false)
 
   const fetchCourses = useCallback(async () => {
     setLoading(true)
     setLoadError('')
-    const { data, error } = await supabase.from('courses').select('*').order('created_at', { ascending: false })
-
-    if (error) {
-      setLoadError('โหลดข้อมูลหลักสูตรไม่สำเร็จ: ' + error.message)
+    try {
+      const data = await apiJson('/api/site-admin/courses')
+      setCourses(data.courses || [])
+    } catch (err) {
+      setLoadError('โหลดข้อมูลหลักสูตรไม่สำเร็จ: ' + err.message)
       setCourses([])
-      setLoading(false)
-      return
     }
+    setLoading(false)
+  }, [])
 
-    const ids = (data || []).flatMap((c) => [c.created_by, c.updated_by])
-    const profileMap = await fetchProfilesByUserIds(ids)
-
-    setCourses((data || []).map((c) => ({
-      ...c,
-      creator: profileMap[c.created_by],
-      updater: profileMap[c.updated_by]
-    })))
+  // ข่าวของคณะที่ผู้ดูแลเขียนเอง — คนละชุดกับข่าว SCI Connect ที่ดึงจากเว็บต้นทางอัตโนมัติ
+  //
+  // ฟอร์มเพิ่ม/แก้ข่าวมีอยู่แล้วและใช้งานได้ (NewsForm.jsx เขียนตาราง news และพาผู้ใช้กลับมาที่
+  // ?tab=news หลังบันทึก) ส่วนแท็บนี้เคยเป็นหน้าว่างที่บอกว่ากำลังพัฒนา จึงไม่มีทางเห็นหรือแก้ข่าว
+  // ที่สร้างไว้ ทั้งที่การ์ดภาพรวมนับจำนวนข่าวให้เห็นอยู่
+  const fetchNews = useCallback(async () => {
+    setLoading(true)
+    setLoadError('')
+    try {
+      const data = await apiJson('/api/site-admin/news')
+      // หลังบ้านใช้ชื่อ published_on ส่วนตารางด้านล่างแสดงฟิลด์ date
+      setNews((data.news || []).map((n) => ({ ...n, date: n.published_on })))
+    } catch (err) {
+      setLoadError('โหลดข้อมูลข่าวสารไม่สำเร็จ: ' + err.message)
+      setNews([])
+    }
     setLoading(false)
   }, [])
 
@@ -91,9 +105,7 @@ const DashboardContent = ({ activeTab, canEdit, isAdmin }) => {
     setLoading(true)
     setLoadError('')
     try {
-      const res = await fetch('/api/sci-connect-news?limit=15')
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'โหลดข่าว SCI Connect ไม่สำเร็จ')
+      const data = await apiJson('/api/site/external-news?limit=15')
       setSciConnectNews(data.news || [])
     } catch (err) {
       setLoadError('โหลดข่าว SCI Connect ไม่สำเร็จ: ' + err.message)
@@ -107,13 +119,8 @@ const DashboardContent = ({ activeTab, canEdit, isAdmin }) => {
   const handleForceSyncSciNews = useCallback(async () => {
     setSyncingSciConnect(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('/api/admin/sync-sci-news', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${session?.access_token}` },
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'อัปเดตไม่สำเร็จ')
+      // หลังบ้านตรวจสิทธิ์จาก token เอง และใช้ตรรกะชุดเดียวกับงานตั้งเวลา
+      const data = await apiJson('/api/site-admin/sync-news', { method: 'POST' })
 
       showToast(`อัปเดตข่าว SCI Connect แล้ว (ข่าวใหม่ ${data.inserted ?? 0} รายการ)`, 'success')
       fetchSciConnectNews()
@@ -129,7 +136,7 @@ const DashboardContent = ({ activeTab, canEdit, isAdmin }) => {
 
     const fetchRecentSciConnect = async () => {
       try {
-        const res = await fetch('/api/sci-connect-news?limit=5')
+        const res = await fetch('/api/site/external-news?limit=5')
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || 'โหลดข่าว SCI Connect ไม่สำเร็จ')
         return data.news || []
@@ -138,33 +145,34 @@ const DashboardContent = ({ activeTab, canEdit, isAdmin }) => {
       }
     }
 
-    const [usersRes, coursesRes, newsRes, knowledgeRes, recentCoursesRes, recentSciConnect, aiRes] =
-      await Promise.all([
-        supabase.from('user_profiles').select('id', { count: 'exact', head: true }),
-        supabase.from('courses').select('id', { count: 'exact', head: true }),
-        supabase.from('news').select('id', { count: 'exact', head: true }),
-        supabase.from('knowledge_articles').select('id', { count: 'exact', head: true }),
-        supabase.from('courses').select('id, title, title_en, created_at').order('created_at', { ascending: false }).limit(5),
-        fetchRecentSciConnect(),
-        supabase.from('ai_settings').select('model').eq('id', 1).maybeSingle()
-      ])
+    // ล้มเหลวรายการเดียวต้องไม่ทำให้ภาพรวมหายทั้งหน้า — แต่ต้องรู้ว่าฐานข้อมูลอ่านได้ไหม
+    const safe = (path) => apiJson(path).catch(() => null)
+    const [users, courses, news, knowledge, recentSciConnect, ai] = await Promise.all([
+      // รายชื่อผู้ใช้เฉพาะ admin — editor จะได้ null ซึ่งแสดงเป็น 0
+      safe('/api/site-admin/users'),
+      safe('/api/site-admin/courses'),
+      safe('/api/site-admin/news'),
+      safe('/api/site-admin/knowledge'),
+      fetchRecentSciConnect(),
+      safe('/api/site-admin/ai-settings')
+    ])
 
-    if (coursesRes.error || newsRes.error) {
-      setLoadError('โหลดข้อมูลภาพรวมไม่สำเร็จ: ' + (coursesRes.error || newsRes.error).message)
+    if (!courses || !news) {
+      setLoadError('โหลดข้อมูลภาพรวมไม่สำเร็จ')
     }
 
     setOverview({
       stats: {
-        users: usersRes.count ?? 0,
-        courses: coursesRes.count ?? 0,
-        news: newsRes.count ?? 0,
-        knowledge: knowledgeRes.count ?? 0
+        users: users?.users?.length ?? 0,
+        courses: courses?.courses?.length ?? 0,
+        news: news?.news?.length ?? 0,
+        knowledge: knowledge?.articles?.length ?? 0
       },
       recentSciConnect,
-      recentCourses: recentCoursesRes.data || [],
+      recentCourses: (courses?.courses || []).slice(0, 5),
       system: {
-        db: !coursesRes.error && !newsRes.error,
-        aiModel: aiRes?.data?.model || null
+        db: Boolean(courses && news),
+        aiModel: ai?.model || null
       }
     })
     setOverviewLoading(false)
@@ -173,8 +181,9 @@ const DashboardContent = ({ activeTab, canEdit, isAdmin }) => {
   useEffect(() => {
     if (activeTab === 'overview') fetchOverview()
     if (activeTab === 'courses') fetchCourses()
+    if (activeTab === 'news') fetchNews()
     if (activeTab === 'sciconnect') fetchSciConnectNews()
-  }, [activeTab, fetchOverview, fetchCourses, fetchSciConnectNews])
+  }, [activeTab, fetchOverview, fetchCourses, fetchNews, fetchSciConnectNews])
 
   const filteredCourses = useMemo(() => {
     const q = courseSearch.trim().toLowerCase()
@@ -185,36 +194,49 @@ const DashboardContent = ({ activeTab, canEdit, isAdmin }) => {
     )
   }, [courses, courseSearch])
 
-  const requestDelete = (id) => setConfirmState({ open: true, id })
-  const closeConfirm = () => setConfirmState({ open: false, id: null })
+  const filteredNews = useMemo(
+    () => news.filter((n) => matchesNewsQuery(n, newsSearch)),
+    [news, newsSearch]
+  )
+
+  // ตาราง/source_type/ป้ายชื่อ อยู่ใน lib เพื่อให้ทดสอบได้ (test/adminDeletable.test.mjs)
+  // ส่วนการโหลดรายการใหม่หลังลบต้องอยู่ที่นี่ เพราะผูกกับ state ของหน้า
+  const RELOAD = { course: fetchCourses, news: fetchNews }
+
+  const requestDelete = (id, kind = 'course') => setConfirmState({ open: true, id, kind })
+  const closeConfirm = () => setConfirmState({ open: false, id: null, kind: 'course' })
 
   const handleConfirmDelete = async () => {
     if (!isAdmin) return
+    const target = DELETE_TARGETS[confirmState.kind]
+    if (!target) return
+
+    const deletedId = confirmState.id
     setDeleting(true)
-    const { error } = await supabase.from('courses').delete().eq('id', confirmState.id)
+    const endpoint = confirmState.kind === 'news' ? 'news' : 'courses'
+    try {
+      await apiJson(`/api/site-admin/${endpoint}/${deletedId}`, { method: 'DELETE' })
+    } catch (err) {
+      setDeleting(false)
+      closeConfirm()
+      showToast('ลบไม่สำเร็จ: ' + err.message, 'error')
+      return
+    }
     setDeleting(false)
     closeConfirm()
 
-    if (error) {
-      showToast('ลบไม่สำเร็จ: ' + error.message, 'error')
-      return
-    }
+    showToast(`ลบ${target.label}เรียบร้อยแล้ว`, 'success')
+    RELOAD[confirmState.kind]()
 
-    showToast('ลบหลักสูตรเรียบร้อยแล้ว', 'success')
-    fetchCourses()
-
-    // ลบ chunk ที่เกี่ยวข้องออกจาก RAG ด้วย กัน AI อ้างอิงข้อมูลที่ถูกลบไปแล้ว (fire-and-forget)
-    supabase.from('rag_documents').delete().eq('source_type', 'major').eq('source_id', confirmState.id)
-      .then(({ error: cleanupError }) => {
-        if (cleanupError) console.error('[Dashboard] failed to remove RAG chunks after delete', cleanupError)
-      })
+    // เดิมล้าง chunk ของ RAG ใน Supabase ตรงนี้ — เลิกแล้วใน Phase 4
+    // เพราะไม่มีที่ใดอ่านตารางนั้นเพื่อตอบคำถาม (ดู src/lib/ragIngest.js)
   }
 
   return (
     <>
       <ConfirmDialog
         open={confirmState.open}
-        title="ยืนยันการลบหลักสูตร"
+        title={`ยืนยันการลบ${DELETE_TARGETS[confirmState.kind]?.label || ''}`}
         message="การลบไม่สามารถย้อนกลับได้"
         onConfirm={handleConfirmDelete}
         onCancel={closeConfirm}
@@ -435,7 +457,7 @@ const DashboardContent = ({ activeTab, canEdit, isAdmin }) => {
                             )}
                             {isAdmin && (
                               <button
-                                onClick={() => requestDelete(course.id)}
+                                onClick={() => requestDelete(course.id, 'course')}
                                 className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -454,12 +476,104 @@ const DashboardContent = ({ activeTab, canEdit, isAdmin }) => {
       )}
 
       {activeTab === 'news' && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 lg:p-14 flex flex-col items-center justify-center text-center max-w-2xl mx-auto">
-          <div className="w-14 h-14 rounded-2xl bg-[#E8F5F1] flex items-center justify-center mb-4">
-            <Newspaper className="w-7 h-7 text-pnru" />
+        <div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                value={newsSearch}
+                onChange={(e) => setNewsSearch(e.target.value)}
+                placeholder="ค้นหาข่าว..."
+                className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pnru"
+              />
+            </div>
+            {canEdit && (
+              <Link
+                to="/admin/news/create"
+                className="inline-flex items-center justify-center gap-2 bg-pnru text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors"
+              >
+                <Plus className="w-5 h-5" />
+                เพิ่มข่าว
+              </Link>
+            )}
           </div>
-          <h3 className="text-lg font-bold text-gray-900 mb-1">ข่าวสาร</h3>
-          <p className="text-sm text-gray-500">หน้านี้กำลังอยู่ระหว่างการพัฒนา จะเปิดใช้งานเร็วๆ นี้</p>
+
+          {loadError && (
+            <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3 mb-4">
+              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <span>{loadError}</span>
+            </div>
+          )}
+
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            {loading ? (
+              <p className="p-6 text-center text-gray-500">กำลังโหลด...</p>
+            ) : filteredNews.length === 0 ? (
+              <p className="p-6 text-center text-gray-500">
+                {newsSearch ? 'ไม่พบข่าวที่ค้นหา' : 'ยังไม่มีข่าว'}
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 text-left text-gray-600">
+                    <tr>
+                      <th className="px-4 py-3 font-medium">หัวข้อข่าว</th>
+                      <th className="px-4 py-3 font-medium">สถานะ</th>
+                      <th className="px-4 py-3 font-medium">ผู้สร้าง/แก้ไข</th>
+                      <th className="px-4 py-3 font-medium text-right">จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredNews.map((item) => (
+                      <tr key={item.id} className="border-t border-gray-100">
+                        <td className="px-4 py-3">
+                          <p className="font-medium text-gray-900">{item.title}</p>
+                          <p className="text-xs text-gray-500">
+                            {[item.category, item.date].filter(Boolean).join(' · ')}
+                          </p>
+                        </td>
+                        <td className="px-4 py-3">
+                          {/* ข่าวร่างยังไม่ถูกส่งเข้า RAG และคนทั่วไปไม่เห็น — ต้องแยกให้ชัดในรายการ */}
+                          {item.status === 'published' ? (
+                            <span className="inline-block rounded-full bg-[#E8F5F1] px-2 py-0.5 text-xs text-pnru">
+                              เผยแพร่แล้ว
+                            </span>
+                          ) : (
+                            <span className="inline-block rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                              ร่าง
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <ActorCell creator={item.creator} updater={item.updater} />
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-2">
+                            {canEdit && (
+                              <Link
+                                to={`/admin/news/edit/${item.id}`}
+                                className="p-2 text-gray-500 hover:text-pnru hover:bg-gray-100 rounded-lg transition-colors"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Link>
+                            )}
+                            {isAdmin && (
+                              <button
+                                onClick={() => requestDelete(item.id, 'news')}
+                                className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

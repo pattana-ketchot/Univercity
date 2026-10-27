@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { User, Mail, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
-import { isConfigured } from '../../lib/supabase'
 import {
   fetchAdminSession,
   canAccessAdminArea,
@@ -23,7 +22,7 @@ const AdminRegister = () => {
   const [formError, setFormError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [checking, setChecking] = useState(true)
-  const [done, setDone] = useState(null) // { needsEmailConfirm: boolean }
+  const [done, setDone] = useState(null) // { needsApproval: boolean }
 
   useEffect(() => {
     let active = true
@@ -54,11 +53,6 @@ const AdminRegister = () => {
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
 
-    if (!isConfigured) {
-      setFormError('ยังไม่ได้ตั้งค่า Supabase กรุณาดูวิธีตั้งค่าใน ADMIN_SETUP.md')
-      return
-    }
-
     setIsLoading(true)
     try {
       const result = await signUpAdminAccount({
@@ -72,7 +66,7 @@ const AdminRegister = () => {
         return
       }
 
-      setDone({ needsEmailConfirm: result.needsEmailConfirm })
+      setDone({ needsApproval: result.needsApproval })
     } catch {
       setFormError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง')
     } finally {
@@ -95,9 +89,6 @@ const AdminRegister = () => {
           <div className="flex items-start gap-2 bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl p-3">
             <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" />
             <span>
-              {done.needsEmailConfirm && (
-                <>กรุณายืนยันอีเมลผ่านลิงก์ที่ส่งไปให้ก่อน จากนั้น</>
-              )}
               บัญชีของคุณยัง<strong>ไม่มีสิทธิ์เข้าใช้งานระบบผู้ดูแล</strong>{' '}
               โปรดติดต่อผู้ดูแลระบบระดับสูงให้กำหนดสิทธิ์ (role) ให้บัญชีของคุณที่หน้าจัดการผู้ใช้
               เมื่อได้รับสิทธิ์แล้วจึงจะเข้าสู่ระบบได้

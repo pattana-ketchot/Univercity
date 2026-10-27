@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
+import { apiJson } from '../../lib/apiAuth'
 import { useAdminAuth } from '../../hooks/useAdminAuth'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { useToast } from '../../components/admin/Toast'
-import { triggerIngest } from '../../lib/ragIngest'
 import { extractFileText } from '../../lib/extractFile'
 import { uploadKnowledgeFile, removeKnowledgeFile } from '../../lib/knowledgeStorage'
 import { ArrowLeft, AlertCircle, UploadCloud, Loader2, FileText, X } from 'lucide-react'
@@ -38,8 +37,13 @@ const KnowledgeFormContent = ({ user }) => {
     if (!isEdit) return
 
     const fetchArticle = async () => {
-      const { data, error: fetchError } = await supabase.from('knowledge_articles').select('*').eq('id', id).single()
-      if (fetchError || !data) {
+      let data = null
+      try {
+        data = await apiJson(`/api/site-admin/knowledge/${id}`)
+      } catch {
+        data = null
+      }
+      if (!data) {
         setError('ไม่พบข้อมูลความรู้นี้')
         setLoading(false)
         return
@@ -134,16 +138,19 @@ const KnowledgeFormContent = ({ user }) => {
     }
 
     setSaving(true)
-    const { data: saved, error: saveError } = isEdit
-      ? await supabase.from('knowledge_articles').update({ ...payload, updated_by: user?.id }).eq('id', id).select('id').single()
-      : await supabase.from('knowledge_articles').insert({ ...payload, created_by: user?.id, updated_by: user?.id }).select('id').single()
-    setSaving(false)
-
-    if (saveError) {
-      setError('บันทึกไม่สำเร็จ: ' + saveError.message)
+    try {
+      // ผู้แก้ไขมาจาก token ที่หลังบ้าน ไม่ต้องส่ง created_by/updated_by มาเอง
+      await apiJson(
+        isEdit ? `/api/site-admin/knowledge/${id}` : '/api/site-admin/knowledge',
+        { method: isEdit ? 'PUT' : 'POST', body: JSON.stringify(payload) }
+      )
+    } catch (err) {
+      setSaving(false)
+      setError('บันทึกไม่สำเร็จ: ' + err.message)
       showToast('บันทึกไม่สำเร็จ', 'error')
       return
     }
+    setSaving(false)
 
     showToast(isEdit ? 'บันทึกการแก้ไขเรียบร้อยแล้ว' : 'เพิ่มข้อมูลความรู้เรียบร้อยแล้ว', 'success')
 
@@ -152,11 +159,8 @@ const KnowledgeFormContent = ({ user }) => {
       removeKnowledgeFile(originalFilePathRef.current)
     }
 
-    // ส่งเข้า RAG แบบ fire-and-forget (chunk + embed ฝั่ง server) — ให้ SCI Advisor ค้นเจอเนื้อหานี้ได้
-    const articleId = saved?.id || id
-    if (articleId) {
-      triggerIngest({ sourceType: 'knowledge', sourceId: articleId, title: payload.title, content: payload.content })
-    }
+    // เดิมส่งเนื้อหาเข้าดัชนี RAG ของ Supabase ตรงนี้ — เลิกแล้วใน Phase 4
+    // เพราะไม่มีที่ใดอ่านตารางนั้นเพื่อตอบคำถาม (ดู src/lib/ragIngest.js)
 
     navigate('/admin/knowledge')
   }

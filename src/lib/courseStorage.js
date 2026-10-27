@@ -1,33 +1,39 @@
-import { supabase } from './supabase'
+import { apiFetch } from './apiAuth'
 
-// เก็บรูปคณาจารย์และเอกสารหลักสูตร ต่างจาก knowledge-files (private) ตรงที่
-// bucket นี้ public — หน้ารายละเอียดหลักสูตรเป็นหน้าสาธารณะ ต้องแสดงรูป/
-// ให้ดาวน์โหลดเอกสารได้โดยไม่ต้อง sign in
-const BUCKET = 'course-assets'
+// รูปคณาจารย์และโลโก้หลักสูตร — Phase 4 (มาแทน Supabase Storage bucket `course-assets`)
+//
+// หมวดนี้เปิดสาธารณะเหมือนของเดิม เพราะหน้ารายละเอียดหลักสูตรเป็นหน้าที่ใครก็เข้าได้
+// ต้องแสดงรูปได้โดยไม่ต้องเข้าสู่ระบบ
 
-const uploadCourseFile = async (file, folder) => {
-  const ext = (file.name.split('.').pop() || 'bin').toLowerCase()
-  const path = `${folder}/${crypto.randomUUID()}.${ext}`
+const upload = async (file, category) => {
+  const form = new FormData()
+  form.append('file', file)
 
-  const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
-    contentType: file.type || undefined,
-    upsert: false
-  })
-  if (error) throw new Error(error.message || 'อัปโหลดไฟล์ไม่สำเร็จ')
+  const res = await apiFetch(`/api/uploads/${category}`, { method: 'POST', body: form })
+  let data = null
+  try {
+    data = await res.json()
+  } catch {
+    data = null
+  }
+  if (!res.ok) throw new Error(data?.detail || 'อัปโหลดไฟล์ไม่สำเร็จ')
 
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
-  return { path, url: data.publicUrl, name: file.name, size: file.size }
+  // คืนรูปแบบเดิมที่หน้าเว็บใช้อยู่ — path/url/name/size
+  return { path: data.file_path, url: data.url, name: data.file_name, size: data.file_size }
 }
 
-export const uploadFacultyPhoto = (file) => uploadCourseFile(file, 'faculty')
-export const uploadCourseDocument = (file) => uploadCourseFile(file, 'documents')
+export const uploadFacultyPhoto = (file) => upload(file, 'logo')
+export const uploadCourseLogo = (file) => upload(file, 'logo')
+export const uploadNewsImage = (file) => upload(file, 'news')
+// เอกสารแนบของหลักสูตร — เปิดสาธารณะเหมือนของเดิม เพราะหน้ารายละเอียดให้ดาวน์โหลดได้
+export const uploadCourseDocument = (file) => upload(file, 'course-doc')
 
-// fire-and-forget ใช้ตอนลบ/แทนที่ไฟล์เดิม ไม่ให้ไฟล์ค้างใน storage โดยไม่มีอะไรอ้างอิงถึง
-export const removeCourseFile = async (path) => {
-  if (!path) return
-  const { error } = await supabase.storage.from(BUCKET).remove([path])
-  if (error) console.error('[courseStorage] failed to remove file', error)
-}
+// ไฟล์ถูกตั้งชื่อตาม hash ของเนื้อไฟล์ ไฟล์เดียวกันจึงถูกใช้ร่วมกันได้หลายที่
+// การลบไฟล์ที่ยังมีที่อื่นอ้างถึงจะทำให้รูปที่นั่นหายไปด้วย — จึงไม่ลบ
+//
+// พื้นที่ที่เสียไปคือไฟล์ไม่กี่เมกะไบต์ ซึ่งถูกกว่าการทำบัญชีอ้างอิงให้ถูกต้อง
+// ถ้าวันหนึ่งพื้นที่เป็นปัญหา ให้เขียนงานกวาดไฟล์ที่ไม่มีใครอ้างถึงแยกต่างหาก
+export const removeCourseFile = async () => {}
 
 export const formatFileSize = (bytes) => {
   if (!bytes) return ''

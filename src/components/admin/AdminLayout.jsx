@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
+import { apiJson } from '../../lib/apiAuth'
 import {
   LayoutDashboard,
   GraduationCap,
@@ -42,21 +42,26 @@ const formatThaiDate = (value) => {
 
 // ดึงกิจกรรมล่าสุดจากข่าว/หลักสูตร/คลังความรู้ มารวมกัน เรียงตามวันที่ใหม่สุด เอา 5 รายการแรก
 const fetchRecentActivity = async () => {
-  const [newsRes, coursesRes, knowledgeRes] = await Promise.all([
-    supabase.from('news').select('id, title, date').order('date', { ascending: false }).limit(5),
-    supabase.from('courses').select('id, title, created_at').order('created_at', { ascending: false }).limit(5),
-    supabase.from('knowledge_articles').select('id, title, created_at').order('created_at', { ascending: false }).limit(5)
+  // ล้มเหลวฝั่งใดฝั่งหนึ่งต้องไม่ทำให้แถบกิจกรรมหายทั้งแถบ
+  const safe = (path) => apiJson(path).catch(() => null)
+  const [news, courses, knowledge] = await Promise.all([
+    safe('/api/site-admin/news'),
+    safe('/api/site-admin/courses'),
+    safe('/api/site-admin/knowledge')
   ])
 
   return [
-    ...(newsRes.data || []).map((n) => ({
-      key: `news-${n.id}`, type: 'news', title: n.title, at: n.date, to: `/admin/news/edit/${n.id}`
+    ...(news?.news || []).slice(0, 5).map((n) => ({
+      key: `news-${n.id}`, type: 'news', title: n.title, at: n.published_on || n.created_at,
+      to: `/admin/news/edit/${n.id}`
     })),
-    ...(coursesRes.data || []).map((c) => ({
-      key: `course-${c.id}`, type: 'course', title: c.title, at: c.created_at, to: `/admin/courses/edit/${c.id}`
+    ...(courses?.courses || []).slice(0, 5).map((c) => ({
+      key: `course-${c.id}`, type: 'course', title: c.title, at: c.created_at,
+      to: `/admin/courses/edit/${c.id}`
     })),
-    ...(knowledgeRes.data || []).map((k) => ({
-      key: `knowledge-${k.id}`, type: 'knowledge', title: k.title, at: k.created_at, to: `/admin/knowledge/edit/${k.id}`
+    ...(knowledge?.articles || []).slice(0, 5).map((k) => ({
+      key: `knowledge-${k.id}`, type: 'knowledge', title: k.title, at: k.created_at,
+      to: `/admin/knowledge/edit/${k.id}`
     }))
   ]
     .filter((item) => item.at)

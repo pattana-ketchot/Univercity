@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import CourseCard from './CourseCard'
-import { supabase, isConfigured } from '../lib/supabase'
+import { fetchSiteCourses, byCreatedAt } from '../lib/siteCourses'
 import Reveal from './Reveal'
 
 const CourseCarousel = () => {
@@ -10,26 +10,16 @@ const CourseCarousel = () => {
   const [status, setStatus] = useState('loading') // loading | ready | error
 
   useEffect(() => {
-    const fetchCourses = async () => {
-      if (!isConfigured) {
+    const load = async () => {
+      try {
+        // เรียงและตัดที่ฝั่งหน้าเว็บ เพราะหลังบ้านคืนทั้ง 12 แถวในคำขอเดียวอยู่แล้ว
+        setCourses((await fetchSiteCourses()).sort(byCreatedAt).slice(0, 8))
         setStatus('ready')
-        return
-      }
-      const { data, error } = await supabase
-        .from('courses')
-        .select('id, title, title_en, description, logo')
-        .order('created_at', { ascending: true })
-        .limit(8)
-
-      if (error) {
+      } catch {
         setStatus('error')
-        return
       }
-
-      setCourses(data || [])
-      setStatus('ready')
     }
-    fetchCourses()
+    load()
   }, [])
 
   const scroll = (direction) => {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { supabase, isConfigured } from '../lib/supabase'
+import { fetchSiteCourse } from '../lib/siteCourses'
 import {
   Clock,
   Users,
@@ -76,14 +76,15 @@ const CourseDetail = () => {
       setNotFound(false)
       setFacts({})
 
-      if (!isConfigured) {
-        setLoading(false)
-        return
+      let data = null
+      try {
+        data = await fetchSiteCourse(id)
+      } catch {
+        // อ่านไม่ได้กับไม่มีหลักสูตรนี้ คนละเรื่องกัน แต่หน้านี้แสดงได้แบบเดียว
+        data = null
       }
 
-      const { data, error } = await supabase.from('courses').select('*').eq('id', id).single()
-
-      if (error || !data) {
+      if (!data) {
         setNotFound(true)
         setLoading(false)
         return
@@ -491,14 +492,14 @@ const CourseDetail = () => {
               {activeTab === 'faculty' && (
                 faculty.length > 0 ? (
                   <SectionCard icon={Users} title="คณาจารย์">
-                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                       {faculty.map((teacher, index) => {
                         const nameTh = firstText(teacher.nameTh, teacher.name)
                         const positionTh = firstText(teacher.positionTh, teacher.expertise)
                         return (
                           <div
                             key={index}
-                            className="flex h-full flex-col items-center rounded-[20px] border border-pnru/20 bg-cream p-6 text-center shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+                            className="flex flex-col items-center rounded-[20px] border border-pnru/20 bg-cream p-6 text-center shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
                           >
                             <div className="mb-4 flex h-[150px] w-[150px] flex-shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-pnru bg-white">
                               {teacher.image ? (
@@ -512,22 +513,60 @@ const CourseDetail = () => {
                               )}
                             </div>
 
-                            <h3 className="text-base font-bold leading-snug text-gray-900">{nameTh}</h3>
+                            {/* ชื่อไทยไม่มีช่องว่างระหว่างคำ เบราว์เซอร์จึงตัดกลางชื่อหรือกลางนามสกุลได้
+                                แยกเป็นคำ ๆ ตามช่องว่างที่ผู้กรอกใส่มา แล้วให้แต่ละคำเป็นก้อนเดียว
+                                บรรทัดจึงขึ้นใหม่ "ระหว่างชื่อกับนามสกุล" ก่อนเสมอ และตัดในคำเฉพาะ
+                                เมื่อคำเดียวยาวเกินความกว้างการ์ดจริง ๆ (กันข้อความล้น) */}
+                            <h3 className="flex w-full flex-wrap justify-center gap-x-1 text-base font-bold leading-snug text-gray-900">
+                              {nameTh.split(/\s+/).filter(Boolean).map((part, partIndex) => (
+                                <span key={partIndex} className="inline-block max-w-full break-words">
+                                  {part}
+                                </span>
+                              ))}
+                            </h3>
 
                             {hasText(teacher.nameEn) && (
-                              <p className="mt-1 text-sm italic text-gray-500">{teacher.nameEn}</p>
+                              <p className="mt-1 w-full break-words text-sm italic text-gray-500">
+                                {teacher.nameEn}
+                              </p>
                             )}
 
+                            {/* แสดงตามที่กรอกมา ขึ้นบรรทัดใหม่ตามที่ผู้กรอกเคาะ (whitespace-pre-line)
+                                ไม่แยกข้อความเองด้วยการเดาว่าท่อนไหนเป็นตำแหน่งวิชาการหรือหน้าที่บริหาร
+                                ข้อมูลเดิมที่เป็นบรรทัดเดียวจึงแสดงเหมือนเดิมทุกประการ */}
                             {hasText(positionTh) && positionTh !== 'ไม่ระบุ' && (
-                              <p className="mt-3 text-sm font-bold text-pnru">{positionTh}</p>
+                              <p className="mt-3 w-full whitespace-pre-line break-words text-sm font-bold leading-relaxed text-pnru">
+                                {positionTh}
+                              </p>
+                            )}
+
+                            {/* ตำแหน่งบริหาร เช่น ประธานสาขาวิชา มาจากช่องของตัวเองในหน้าแอดมิน
+                                ไม่ได้แยกมาจากข้อความตำแหน่งทางวิชาการด้วยการเดา อาจารย์ที่ไม่มี
+                                ตำแหน่งนี้การ์ดจะไม่มีบรรทัดนี้เลย ไม่ใช่เว้นที่ว่างไว้ */}
+                            {hasText(teacher.roleTh) && (
+                              <p className="mt-1 w-full whitespace-pre-line break-words text-sm font-bold leading-relaxed text-pnru">
+                                {teacher.roleTh}
+                              </p>
                             )}
 
                             {hasText(teacher.positionEn) && (
-                              <p className="mt-0.5 text-xs italic text-pnru">{teacher.positionEn}</p>
+                              <p className="mt-1 w-full whitespace-pre-line break-words text-xs italic leading-relaxed text-pnru">
+                                {teacher.positionEn}
+                              </p>
                             )}
 
+                            {/* อีเมลต่อจากตำแหน่งด้วยระยะเท่ากับช่องอื่น ไม่ดันไปติดขอบล่าง
+                                เดิมใช้ mt-auto ให้อีเมลทุกใบอยู่แนวเดียวกัน แต่ใบที่ข้อความสั้น
+                                จะเหลือช่องว่างกลางการ์ดถึง 61px ซึ่งดูห่างเกินไป
+                                การ์ดยังสูงเท่ากันทั้งแถวเหมือนเดิม (h-full) ที่ว่างไปอยู่ใต้อีเมลแทน
+                                break-all เพราะอีเมลยาวไม่มีช่องว่างให้ตัด */}
                             {hasText(teacher.email) && (
-                              <p className="mt-3 text-xs font-bold text-pnru">{teacher.email}</p>
+                              <a
+                                href={`mailto:${teacher.email}`}
+                                className="mt-3 block w-full break-all text-xs font-bold text-pnru underline-offset-2 hover:underline"
+                              >
+                                {teacher.email}
+                              </a>
                             )}
                           </div>
                         )

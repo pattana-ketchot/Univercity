@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Plus, Trash2, X, Check, GraduationCap, Sparkles, Loader2, AlertTriangle } from 'lucide-react'
-import { supabase, isConfigured } from '../lib/supabase'
+import { fetchSiteCoursesByIds } from '../lib/siteCourses'
 
 const CompareResult = () => {
   const navigate = useNavigate()
@@ -17,27 +17,20 @@ const CompareResult = () => {
     const fetchCourses = async () => {
       const courseIds = searchParams.get('courses')?.split(',').filter(Boolean) || []
 
-      if (!isConfigured || courseIds.length === 0) {
+      if (courseIds.length === 0) {
         setSelectedCourses([])
         setLoading(false)
         return
       }
 
       setLoading(true)
-      const { data } = await supabase
-        .from('courses')
-        .select('*')
-        .in('id', courseIds)
-
-      const merged = (data || []).map((course) => ({
-        ...course,
-        careers: course.careers || []
-      }))
-
-      // Keep the order the user selected them in
-      const ordered = courseIds
-        .map((id) => merged.find((c) => c.id === id))
-        .filter(Boolean)
+      // ชั้นดึงข้อมูลคงลำดับที่ผู้ใช้เลือกไว้ให้แล้ว
+      let ordered = []
+      try {
+        ordered = await fetchSiteCoursesByIds(courseIds)
+      } catch {
+        ordered = []
+      }
 
       setSelectedCourses(ordered)
       // การเปลี่ยนชุดสาขาทำให้ผลวิเคราะห์เดิมใช้ไม่ได้
