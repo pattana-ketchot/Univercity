@@ -341,9 +341,12 @@ const ChatAdvisor = () => {
             {/* Chat Composer */}
             <div className="p-2.5 sm:p-4 border-t border-gray-200 bg-white">
               {/* เลือกโมเดลที่จะตอบ — แสดงเฉพาะเมื่อหลังบ้านเปิดให้เลือกมากกว่าหนึ่งตัว
-                  คำอธิบายของแต่ละตัวมาจากหลังบ้าน ไม่ได้เขียนทับไว้ที่นี่ */}
+                  ชื่อรุ่นและคำอธิบายของแต่ละตัวมาจากหลังบ้าน ไม่ได้เขียนทับไว้ที่นี่
+
+                  แถวนี้ขึ้นบรรทัดใหม่ได้เมื่อที่ไม่พอ — วัดบนจอ 375px ถ้าบังคับให้อยู่บรรทัดเดียว
+                  ชื่อรุ่นกิน 102px แล้วคำอธิบายเหลือ 31px คือเห็นแต่จุดไข่ปลา */}
               {modelOptions.length > 1 && (
-                <div className="flex items-center gap-2 mb-2 text-xs text-gray-600">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-2 text-xs text-gray-600">
                   <label htmlFor="model-choice" className="flex-shrink-0">ตอบด้วย</label>
                   <select
                     id="model-choice"
@@ -356,8 +359,19 @@ const ChatAdvisor = () => {
                       <option key={o.id} value={o.id}>{o.label}</option>
                     ))}
                   </select>
+                  {/* ชื่อรุ่นที่เขียนคำตอบจริง — มาจากหลังบ้านเหมือนคำอธิบาย ไม่ได้เขียนทับไว้ที่นี่
+                      ผู้ดูแลเปลี่ยนรุ่นของตัวเลือกใด ชื่อที่ผู้ใช้เห็นก็เปลี่ยนตามเองโดยไม่ต้อง build ใหม่
+                      ไม่ย่อตัวเมื่อที่แคบ เพราะเป็นข้อมูลที่ผู้ใช้ขอให้บอก ส่วนคำอธิบายย่อได้ */}
+                  {chosenOption?.model && (
+                    <span
+                      className="flex-shrink-0 font-mono text-[11px] text-gray-500"
+                      title={`รุ่นที่ใช้เขียนคำตอบ: ${chosenOption.model}`}
+                    >
+                      {chosenOption.model}
+                    </span>
+                  )}
                   {chosenOption?.hint && (
-                    <span className="truncate" title={chosenOption.hint}>{chosenOption.hint}</span>
+                    <span className="truncate" title={chosenOption.hint}>· {chosenOption.hint}</span>
                   )}
                 </div>
               )}
