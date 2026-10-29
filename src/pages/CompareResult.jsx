@@ -4,6 +4,10 @@ import { Plus, Trash2, X, Check, GraduationCap, Sparkles, Loader2, AlertTriangle
 import { fetchSiteCoursesByIds } from '../lib/siteCourses'
 import { levelOf } from '../lib/courseLevels'
 import EngineNote from '../components/EngineNote'
+import { postJsonWithTimeout } from '../lib/apiRequest'
+
+// เหตุผลเดียวกับหน้าแนะนำสาขา — ยาวกว่าเพดานของหลังบ้านเล็กน้อย
+const REQUEST_TIMEOUT_MS = 100000
 
 const CompareResult = () => {
   const navigate = useNavigate()
@@ -63,20 +67,12 @@ const CompareResult = () => {
         careers: c.careers
       }))
 
-      const response = await fetch('/api/compare-courses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ courses: payload })
-      })
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}))
-        throw new Error(body.error || 'AI request failed')
-      }
-
-      setAiResult(await response.json())
-    } catch {
-      setAiError('ระบบ AI ไม่สามารถวิเคราะห์การเปรียบเทียบได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง')
+      setAiResult(await postJsonWithTimeout(
+        '/api/compare-courses', { courses: payload }, REQUEST_TIMEOUT_MS
+      ))
+    } catch (err) {
+      // สาขาที่เลือกอยู่ใน query string ของหน้า การล้มของคำขอจึงไม่ทำให้ตัวเลือกหาย
+      setAiError(err.message || 'ระบบ AI ไม่สามารถวิเคราะห์การเปรียบเทียบได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง')
     } finally {
       setAiLoading(false)
     }

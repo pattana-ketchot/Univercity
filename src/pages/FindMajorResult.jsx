@@ -5,6 +5,11 @@ import { fetchSiteCourses } from '../lib/siteCourses'
 import { forUndergraduateAdvice } from '../lib/courseLevels'
 import { getFindMajorAnswers, clearFindMajorAnswers } from '../lib/findMajorAnswers'
 import EngineNote from '../components/EngineNote'
+import { postJsonWithTimeout } from '../lib/apiRequest'
+
+// ยาวกว่าเพดานของหลังบ้าน (90 วินาที) เล็กน้อย เพื่อให้ข้อความบอกเหตุของหลังบ้าน
+// มาถึงผู้ใช้ก่อน ส่วนค่านี้เป็นตาข่ายรองรับกรณีคำขอค้างระหว่างทาง
+const REQUEST_TIMEOUT_MS = 100000
 
 const steps = [
   { id: 1, title: 'ข้อมูลพื้นฐาน', status: 'completed' },
@@ -109,20 +114,15 @@ const FindMajorResult = () => {
     setResult(null)
 
     try {
-      const response = await fetch('/api/recommend-major', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers: savedAnswers, courses: coursesData })
-      })
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}))
-        throw new Error(body.error || 'AI request failed')
-      }
-
-      setResult(await response.json())
+      setResult(await postJsonWithTimeout(
+        '/api/recommend-major',
+        { answers: savedAnswers, courses: coursesData },
+        REQUEST_TIMEOUT_MS
+      ))
     } catch (err) {
-      setError('ขออภัยครับ ระบบ AI ไม่สามารถวิเคราะห์ผลลัพธ์ได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง')
+      // บอกเหตุที่หลังบ้านให้มา ถ้ามี — มันอธิบายได้ตรงกว่าข้อความกลาง ๆ ของหน้านี้
+      // คำตอบแบบสอบถามยังอยู่ใน sessionStorage ปุ่ม "ลองใหม่" จึงใช้ของเดิมได้ทันที
+      setError(err.message || 'ขออภัยครับ ระบบ AI ไม่สามารถวิเคราะห์ผลลัพธ์ได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง')
     } finally {
       setLoading(false)
     }
