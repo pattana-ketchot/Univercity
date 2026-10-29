@@ -7,7 +7,7 @@ import { getFindMajorAnswers, clearFindMajorAnswers } from '../lib/findMajorAnsw
 import EngineNote from '../components/EngineNote'
 import { postJsonWithTimeout } from '../lib/apiRequest'
 import {
-  PERCENT_DISCLAIMER, answerLines, formulaLines, gapLines, hasScoreDetail, matchLines
+  PERCENT_DISCLAIMER, answerLines, formulaLines, gapLines, hasScoreDetail, matchItems
 } from '../lib/scoreDetail'
 
 // ยาวกว่าเพดานของหลังบ้าน (90 วินาที) เล็กน้อย เพื่อให้ข้อความบอกเหตุของหลังบ้าน
@@ -37,7 +37,7 @@ const WhyThisScore = ({ why, detail, courseId }) => {
   if (!hasScoreDetail(why)) return null
 
   const answers = answerLines(detail)
-  const matches = matchLines(why)
+  const matches = matchItems(why)
   const gaps = gapLines(why, detail)
   const formula = formulaLines(why)
 
@@ -85,15 +85,32 @@ const WhyThisScore = ({ why, detail, courseId }) => {
         <p className="text-xs text-gray-500">
           ระบบใช้คำตอบชุดนี้ชุดเดียวเทียบกับทุกสาขา คะแนนที่ต่างกันจึงมาจากเนื้อหาของแต่ละสาขา
         </p>
-        {section(
-          'จุดที่ตรงกับเนื้อหาหลักสูตร (ไฟล์และหน้าที่ใช้จริง)',
-          matches,
-          'ยังไม่พบหน้าเอกสารที่เชื่อมโยงกับคำตอบของคุณ'
-        )}
+        <div>
+          <p className="font-semibold text-gray-800">ส่วนของเอกสารที่ใช้เทียบคะแนน</p>
+          {matches.length > 0 ? (
+            <ul className="mt-1 space-y-2">
+              {matches.map((item, index) => (
+                <li key={index}>
+                  <p className="text-gray-600">{item.where}</p>
+                  {item.excerpt && (
+                    <p className="mt-0.5 border-l-2 border-gray-300 pl-2 text-gray-700">
+                      “{item.excerpt}”
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-1 text-gray-500">ยังไม่พบส่วนของเอกสารที่ระบบใช้เทียบกับคำตอบของคุณ</p>
+          )}
+          <p className="mt-1 text-xs text-gray-500">
+            ความใกล้เคียงเชิงข้อความเป็นค่าที่วัดจากเวกเตอร์ของข้อความ ไม่ใช่การยืนยันว่าเนื้อหาส่วนนี้ตรงกับคำตอบของคุณ
+          </p>
+        </div>
         {section(
           'ส่วนที่ยังไม่พบข้อมูลเชื่อมโยง',
           gaps,
-          'ไม่มีจุดที่ขาด — คำตอบทุกข้อที่ใช้คิดคะแนนเชื่อมโยงกับเอกสารได้'
+          'ยังไม่มีรายละเอียดช่องว่างเพิ่มเติมจากข้อมูลที่ระบบตรวจในรอบนี้'
         )}
         {section('เปอร์เซ็นต์นี้คิดมาอย่างไร', formula, 'หลังบ้านไม่ได้ส่งรายละเอียดการคำนวณมา')}
         <p className="text-xs text-gray-500">{PERCENT_DISCLAIMER}</p>
