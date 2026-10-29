@@ -6,6 +6,9 @@ import { forUndergraduateAdvice } from '../lib/courseLevels'
 import { getFindMajorAnswers, clearFindMajorAnswers } from '../lib/findMajorAnswers'
 import EngineNote from '../components/EngineNote'
 import { postJsonWithTimeout } from '../lib/apiRequest'
+import {
+  PERCENT_DISCLAIMER, answerLines, formulaLines, gapLines, hasScoreDetail, matchLines
+} from '../lib/scoreDetail'
 
 // ยาวกว่าเพดานของหลังบ้าน (90 วินาที) เล็กน้อย เพื่อให้ข้อความบอกเหตุของหลังบ้าน
 // มาถึงผู้ใช้ก่อน ส่วนค่านี้เป็นตาข่ายรองรับกรณีคำขอค้างระหว่างทาง
@@ -19,7 +22,87 @@ const steps = [
   { id: 5, title: 'ผลลัพธ์', status: 'current' }
 ]
 
-const RecommendationCard = ({ course, matchScore, reason, highlight }) => {
+/**
+ * "ทำไมได้คะแนนนี้" ของสาขาใบนี้ใบเดียว
+ *
+ * ทุกบรรทัดมาจาก why ของการ์ดใบนี้ ซึ่งหลังบ้านคำนวณมาแล้วและแยกตามหลักสูตรตั้งแต่
+ * ชั้น SQL — ไฟล์/หน้าหลักฐานจึงเป็นของสาขานี้และฉบับนี้เสมอ ที่นี่ไม่คิดเลขใหม่
+ * ไม่เรียกโมเดลเพิ่ม และไม่เอาค่าของการ์ดใบอื่นมาแทนเมื่อใบนี้ไม่มีค่า
+ */
+const WhyThisScore = ({ why, detail, courseId }) => {
+  const [open, setOpen] = useState(false)
+  const panelId = `why-score-${courseId}`
+
+  // หลังบ้านรุ่นก่อนไม่ส่ง why มา — ไม่แสดงปุ่มเลย ดีกว่าเปิดมาแล้วว่างเปล่า
+  if (!hasScoreDetail(why)) return null
+
+  const answers = answerLines(detail)
+  const matches = matchLines(why)
+  const gaps = gapLines(why, detail)
+  const formula = formulaLines(why)
+
+  const section = (title, items, empty) => (
+    <div>
+      <p className="font-semibold text-gray-800">{title}</p>
+      {items.length > 0 ? (
+        <ul className="mt-1 list-disc pl-5 space-y-0.5">
+          {items.map((item, index) => <li key={index}>{item}</li>)}
+        </ul>
+      ) : (
+        <p className="mt-1 text-gray-500">{empty}</p>
+      )}
+    </div>
+  )
+
+  return (
+    <div className="mt-3 border-t border-gray-200 pt-3">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-controls={panelId}
+        className="inline-flex min-h-[44px] items-center gap-1.5 rounded-md text-sm font-medium text-pnru hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-pnru/40"
+      >
+        <Info className="w-4 h-4 shrink-0" aria-hidden="true" />
+        ทำไมได้คะแนนนี้?
+        <ChevronDown
+          className={`w-4 h-4 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+          aria-hidden="true"
+        />
+      </button>
+      <div
+        id={panelId}
+        role="region"
+        aria-label="ทำไมได้คะแนนนี้"
+        hidden={!open}
+        className="mt-3 rounded-lg bg-white/70 border border-gray-200 p-4 text-sm text-gray-700 leading-relaxed space-y-3"
+      >
+        {section(
+          'คำตอบของคุณที่ใช้คิดคะแนน',
+          answers,
+          'ไม่มีคำตอบในข้อที่ระบบใช้คิดคะแนน'
+        )}
+        <p className="text-xs text-gray-500">
+          ระบบใช้คำตอบชุดนี้ชุดเดียวเทียบกับทุกสาขา คะแนนที่ต่างกันจึงมาจากเนื้อหาของแต่ละสาขา
+        </p>
+        {section(
+          'จุดที่ตรงกับเนื้อหาหลักสูตร (ไฟล์และหน้าที่ใช้จริง)',
+          matches,
+          'ยังไม่พบหน้าเอกสารที่เชื่อมโยงกับคำตอบของคุณ'
+        )}
+        {section(
+          'ส่วนที่ยังไม่พบข้อมูลเชื่อมโยง',
+          gaps,
+          'ไม่มีจุดที่ขาด — คำตอบทุกข้อที่ใช้คิดคะแนนเชื่อมโยงกับเอกสารได้'
+        )}
+        {section('เปอร์เซ็นต์นี้คิดมาอย่างไร', formula, 'หลังบ้านไม่ได้ส่งรายละเอียดการคำนวณมา')}
+        <p className="text-xs text-gray-500">{PERCENT_DISCLAIMER}</p>
+      </div>
+    </div>
+  )
+}
+
+const RecommendationCard = ({ course, matchScore, reason, why, detail, highlight }) => {
   const navigate = useNavigate()
   if (!course) return null
 
@@ -34,10 +117,12 @@ const RecommendationCard = ({ course, matchScore, reason, highlight }) => {
           {matchScore}% เหมาะสม
         </div>
       </div>
-      <p className="text-sm lg:text-base text-gray-700 leading-relaxed mb-4">{reason}</p>
+      <p className="text-sm lg:text-base text-gray-700 leading-relaxed mb-2">{reason}</p>
+      {/* ที่มาของคะแนนใบนี้ — ใต้เปอร์เซ็นต์ของการ์ดใบเดียวกัน */}
+      <WhyThisScore why={why} detail={detail} courseId={course.id} />
       <button
         onClick={() => navigate(`/courses/${course.id}`)}
-        className={`inline-flex min-h-[44px] items-center gap-2 text-sm font-medium ${highlight ? 'text-pnru' : 'text-gray-600'} hover:underline`}
+        className={`mt-3 inline-flex min-h-[44px] items-center gap-2 text-sm font-medium ${highlight ? 'text-pnru' : 'text-gray-600'} hover:underline`}
       >
         ดูรายละเอียดหลักสูตร
         <ArrowRight className="w-4 h-4" />
@@ -278,6 +363,8 @@ const FindMajorResult = () => {
                     course={findCourse(result.primary.courseId)}
                     matchScore={result.primary.matchScore}
                     reason={result.primary.reason}
+                    why={result.primary.why}
+                    detail={result.scoringDetail}
                     highlight
                   />
                 </div>
@@ -292,6 +379,8 @@ const FindMajorResult = () => {
                           course={findCourse(alt.courseId)}
                           matchScore={alt.matchScore}
                           reason={alt.reason}
+                          why={alt.why}
+                          detail={result.scoringDetail}
                         />
                       ))}
                     </div>
