@@ -154,13 +154,16 @@ const AllCourses = () => {
                     key={course.id}
                     className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex flex-col"
                   >
-                    {/* Logo */}
-                    <div className="flex items-center justify-center h-32 bg-gray-100 rounded-t-xl overflow-hidden">
+                    {/* Logo — ให้รูปกินพื้นที่ของแถบเท่าที่พอดี แทนที่จะค้างอยู่ที่ 80px
+                        กลางแถบสูง 128px ซึ่งทำให้โลโก้ดูเล็กจนอ่านไม่ออก
+                        ยังเป็น object-contain เหมือนเดิม โลโก้จึงไม่ถูกครอปหรือยืด และใช้
+                        max-* เพื่อไม่ขยายรูปที่เล็กกว่ากรอบจนแตก */}
+                    <div className="flex items-center justify-center h-36 p-3 bg-gray-100 rounded-t-xl overflow-hidden">
                       {course.logo ? (
                         <img
                           src={course.logo}
                           alt={course.title}
-                          className="w-20 h-20 object-contain"
+                          className="max-h-full max-w-full object-contain"
                           onError={(e) => {
                             e.target.style.display = 'none'
                             e.target.nextSibling.style.display = 'block'
