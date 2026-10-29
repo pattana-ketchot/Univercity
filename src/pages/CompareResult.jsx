@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Plus, Trash2, X, Check, GraduationCap, Sparkles, Loader2, AlertTriangle } from 'lucide-react'
 import { fetchSiteCoursesByIds } from '../lib/siteCourses'
 import { levelOf } from '../lib/courseLevels'
+import EngineNote from '../components/EngineNote'
 
 const CompareResult = () => {
   const navigate = useNavigate()
@@ -207,6 +208,8 @@ const CompareResult = () => {
                 {aiResult.summary && (
                   <p className="text-sm lg:text-base text-gray-700 leading-relaxed">{aiResult.summary}</p>
                 )}
+                {/* ใครเขียนข้อความเปรียบเทียบชุดนี้ — ค่ามาจากหลังบ้าน ไม่ใช่ค่าที่ตั้งไว้ที่นี่ */}
+                <EngineNote engine={aiResult.engine} className="-mt-2" />
 
                 {Array.isArray(aiResult.courses) && aiResult.courses.length > 0 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

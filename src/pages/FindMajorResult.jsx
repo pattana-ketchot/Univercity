@@ -4,6 +4,7 @@ import { Sparkles, Loader2, RotateCcw, ArrowRight, AlertTriangle, Info, ChevronD
 import { fetchSiteCourses } from '../lib/siteCourses'
 import { forUndergraduateAdvice } from '../lib/courseLevels'
 import { getFindMajorAnswers, clearFindMajorAnswers } from '../lib/findMajorAnswers'
+import EngineNote from '../components/EngineNote'
 
 const steps = [
   { id: 1, title: 'ข้อมูลพื้นฐาน', status: 'completed' },
@@ -266,6 +267,8 @@ const FindMajorResult = () => {
                     <h3 className="font-semibold text-gray-800">สรุปจาก AI</h3>
                   </div>
                   <p className="text-sm lg:text-base text-gray-700 leading-relaxed">{result.summary}</p>
+                  {/* ใครเขียนคำอธิบาย และคะแนนมาจากไหน — ค่าทั้งหมดมาจากหลังบ้าน */}
+                  <EngineNote engine={result.engine} className="mt-2" />
                   <ScoreExplanation />
                 </div>
 

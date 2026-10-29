@@ -1,0 +1,47 @@
+// บอกผู้ใช้ว่าอะไรในผลชุดนี้มาจากโมเดล และอะไรมาจากเกณฑ์ของระบบ
+//
+// **ชื่อรุ่นมาจากหลังบ้านเท่านั้น** ที่นี่ไม่เขียนชื่อรุ่นใดไว้เลย เพราะผู้ดูแลเปลี่ยนรุ่นได้
+// ตลอด และเส้นทาง Gemini มีโมเดลในเครื่องรับช่วงต่อเมื่อเจ้าหลักล้ม — ค่าที่หลังบ้านส่งมา
+// คือตัวที่เขียนข้อความให้คำขอนั้นจริง ไม่ใช่ค่าที่ตั้งไว้
+//
+// engine ไม่มีมาเลย (หลังบ้านรุ่นเก่า) = ไม่แสดงอะไร ดีกว่าเดาแล้วบอกผิด
+
+const PROVIDER_LABEL = { gemini: 'Gemini', ollama: 'โมเดลในเครื่อง' }
+
+const SCORING_TEXT = {
+  embedding_and_rules:
+    'คะแนนความเหมาะสมคำนวณจากความใกล้เคียงระหว่างคำตอบของคุณกับเนื้อหาในเอกสารหลักสูตร และเกณฑ์ของระบบ'
+}
+
+export const engineLines = (engine) => {
+  if (!engine) return []
+  const lines = []
+  const used = engine.explanation
+
+  if (used) {
+    const provider = PROVIDER_LABEL[used.provider] || used.provider || 'ผู้ให้บริการที่ไม่ทราบชื่อ'
+    // รุ่นที่หลังบ้านบอกว่าไม่รู้ ("?" หรือว่าง) ต้องไม่ถูกเติมด้วยค่าตั้งต้นของหน้าเว็บ
+    const model = used.model && used.model !== '?' ? used.model : 'ไม่มีข้อมูลรุ่น'
+    lines.push(`คำอธิบายโดย ${provider} · ${model}`)
+  } else {
+    lines.push('ประมวลผลจากข้อมูลและเกณฑ์ของระบบ')
+  }
+
+  if (engine.scoring && SCORING_TEXT[engine.scoring]) lines.push(SCORING_TEXT[engine.scoring])
+  return lines
+}
+
+const EngineNote = ({ engine, className = '' }) => {
+  const lines = engineLines(engine)
+  if (lines.length === 0) return null
+
+  return (
+    <p className={`text-xs text-gray-500 leading-relaxed ${className}`}>
+      {lines.map((line, index) => (
+        <span key={index} className="block">{line}</span>
+      ))}
+    </p>
+  )
+}
+
+export default EngineNote
