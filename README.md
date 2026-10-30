@@ -134,7 +134,7 @@ colors: {
    npm install react-router-dom
    ```
 
-## เทคโนโลジีที่ใช้
+## เทคโนโลยีที่ใช้
 
 - **React 18** - UI Library
 - **Vite** - Build Tool (เร็วกว่า Create React App)
