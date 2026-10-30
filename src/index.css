@@ -138,14 +138,18 @@ body.nav-open {
   }
 }
 
+/* ภาพพื้นหลังเข้าแบบจางขึ้นมา แล้วคลายซูมเข้าที่
+   ย่อจาก 0.97 แบบเดิมทำให้ภาพเล็กกว่ากรอบระหว่างอนิเมชัน เห็นพื้นขาวที่ขอบบนถึง 21px
+   อยู่ 0.65 วินาที (วัดจากหน้าจริง) จึงเริ่มที่ 1.02 แทน ภาพจะล้นกรอบเล็กน้อยตลอดทาง
+   ไม่มีขอบโหว่ และไม่เลื่อนแนวตั้งด้วยเหตุผลเดียวกัน */
 @keyframes heroFadeScale {
   from {
     opacity: 0;
-    transform: translateY(calc(var(--hero-anim-distance) / 2)) scale(0.97);
+    transform: scale(1.02);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: scale(1);
   }
 }
 
