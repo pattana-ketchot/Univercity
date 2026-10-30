@@ -105,7 +105,7 @@ const Footer = () => {
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="w-4 h-4 flex-shrink-0" />
-                <span>saraban@pnru.ac.th</span>
+                <span>scitecpnru@pnru.ac.th</span>
               </li>
             </ul>
           </div>
@@ -126,7 +126,7 @@ const Footer = () => {
                 </svg>
               </a>
               <a
-                href="mailto:sci@psru.ac.th"
+                href="mailto:scitecpnru@pnru.ac.th"
                 className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center hover:bg-pnru transition"
                 aria-label="Email"
               >
