@@ -139,16 +139,24 @@ body.nav-open {
 }
 
 /* ภาพพื้นหลังเข้าแบบจางขึ้นมา แล้วคลายซูมเข้าที่
-   ย่อจาก 0.97 แบบเดิมทำให้ภาพเล็กกว่ากรอบระหว่างอนิเมชัน เห็นพื้นขาวที่ขอบบนถึง 21px
-   อยู่ 0.65 วินาที (วัดจากหน้าจริง) จึงเริ่มที่ 1.02 แทน ภาพจะล้นกรอบเล็กน้อยตลอดทาง
-   ไม่มีขอบโหว่ และไม่เลื่อนแนวตั้งด้วยเหตุผลเดียวกัน */
-@keyframes heroFadeScale {
+   แยกเป็นสองชั้น: กรอบรูปทำแค่จางขึ้นมา ส่วนตัวรูปข้างในเป็นคนคลายซูม
+   เพราะถ้าขยายทั้งกรอบ รูปจะล้นออกนอกจอและทำให้หน้าเลื่อนแนวนอนได้ 14px
+   ระหว่างอนิเมชัน (วัดจากหน้าจริงที่จอ 1440) · ย่อจาก 0.97 แบบเดิมก็ไม่ได้
+   เพราะรูปจะเล็กกว่ากรอบ เห็นพื้นขาวที่ขอบบนถึง 21px */
+@keyframes heroFadeIn {
   from {
     opacity: 0;
-    transform: scale(1.02);
   }
   to {
     opacity: 1;
+  }
+}
+
+@keyframes heroZoomSettle {
+  from {
+    transform: scale(1.02);
+  }
+  to {
     transform: scale(1);
   }
 }
@@ -175,7 +183,14 @@ body.nav-open {
 }
 
 .hero-section .hero-anim-image {
-  animation: heroFadeScale 0.65s ease-out both;
+  animation: heroFadeIn 0.65s ease-out both;
+  animation-delay: 0.1s;
+  /* กันรูปที่ยังขยายอยู่ข้างในไม่ให้ดันความกว้างของหน้า */
+  overflow: hidden;
+}
+
+.hero-section .hero-anim-image img {
+  animation: heroZoomSettle 0.65s ease-out both;
   animation-delay: 0.1s;
 }
 
@@ -226,7 +241,8 @@ body.nav-open {
   .hero-section .hero-anim-heading,
   .hero-section .hero-anim-description,
   .hero-section .hero-anim-buttons,
-  .hero-section .hero-anim-image {
+  .hero-section .hero-anim-image,
+  .hero-section .hero-anim-image img {
     animation: none;
     opacity: 1;
     transform: none;
