@@ -205,6 +205,22 @@ const CompareResult = () => {
       }
     },
     {
+      key: 'tuition',
+      label: 'ค่าเทอม',
+      render: (course) => {
+        const f = facts[course.id] || {}
+        if (!f.tuition_per_semester) {
+          return <p className="text-sm text-gray-500">ยังไม่มีข้อมูลในระบบ</p>
+        }
+        return (
+          <div className="text-sm text-gray-600 space-y-1">
+            <p className="font-semibold text-gray-800">{f.tuition_per_semester} / ภาคการศึกษา</p>
+            {f.study_format && <p className="text-xs text-gray-500">{f.study_format}</p>}
+          </div>
+        )
+      }
+    },
+    {
       key: 'description',
       label: 'รายละเอียดหลักสูตร',
       render: (course) => (
