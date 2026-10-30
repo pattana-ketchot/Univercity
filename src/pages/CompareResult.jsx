@@ -204,8 +204,13 @@ const CompareResult = () => {
                 {aiResult.summary && (
                   <p className="text-sm lg:text-base text-gray-700 leading-relaxed">{aiResult.summary}</p>
                 )}
-                {/* ใครเขียนข้อความเปรียบเทียบชุดนี้ — ค่ามาจากหลังบ้าน ไม่ใช่ค่าที่ตั้งไว้ที่นี่ */}
-                <EngineNote engine={aiResult.engine} className="-mt-2" />
+                {/* โมเดลที่ทำงานให้หน้านี้จริง — ค่าทั้งหมดมาจากหลังบ้าน ไม่ใช่ค่าที่ตั้งไว้ที่นี่
+                    วางเป็นกล่องมีหัวข้อ ไม่ใช่บรรทัดจาง ๆ ใต้ข้อความ เพราะผู้ใช้ถามหาว่า
+                    "ใช้โมเดลไหนวิเคราะห์" แล้วหาไม่เจอทั้งที่บรรทัดนั้นอยู่บนหน้าแล้ว */}
+                <div className="-mt-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                  <p className="mb-1 text-xs font-semibold text-gray-700">โมเดลที่ใช้ในหน้านี้</p>
+                  <EngineNote engine={aiResult.engine} />
+                </div>
 
                 {Array.isArray(aiResult.courses) && aiResult.courses.length > 0 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
