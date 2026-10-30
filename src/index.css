@@ -98,6 +98,13 @@ body.nav-open {
   border-radius: 9999px;
 }
 
+/* ตัวอักษรหัวข้อ Hero — utility ขนาดตัวอักษรของ Tailwind ตั้ง line-height มาเท่าขนาดตัวอักษร
+   (lg:text-[3.25rem] ให้ 1 เท่า) และเพราะมันอยู่ใน media query จึงชนะ leading-* ที่ไม่มี breakpoint
+   ภาษาไทยมีสระบนซ้อนวรรณยุกต์ ("ที่" "ใช่") ระยะเท่านี้ทำให้บรรทัดดูชนกัน จึงคุมไว้ตรงนี้จุดเดียว */
+.hero-section .hero-heading h1 {
+  line-height: 1.24;
+}
+
 /* Hero Section entrance animation — scoped to .hero-section only */
 .hero-section {
   --hero-anim-distance: 20px;

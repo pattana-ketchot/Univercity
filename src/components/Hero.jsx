@@ -48,34 +48,37 @@ const Hero = () => {
       {/* Content Layer - Text and Buttons */}
       <div className="hero-content relative mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 pt-10 sm:pt-12 md:pt-16 lg:pt-20 max-w-[1920px]">
         <div className="hero-content-inner max-w-2xl relative">
-          {/* Backdrop panel behind the text so it reads clearly instead of looking layered on top of the photo */}
+          {/* แผ่นรองหลังข้อความ ให้ตัวหนังสืออ่านออกแม้ทับลายภาพ
+              เดิมแผ่นนี้เป็น -z-10 ซึ่งดันมันไปอยู่หลังรูป Hero (รูปเป็น absolute z auto)
+              จึงมองไม่เห็นและไม่ช่วยอะไรเลย — เอา -z-10 ออก แล้วให้กล่องข้อความเป็น relative
+              เพื่อให้ข้อความทับแผ่นนี้ตามลำดับใน DOM */}
           <div
-            className="absolute inset-0 -z-10 bg-cream/80 backdrop-blur-lg rounded-3xl"
+            className="absolute inset-0 bg-cream/75 backdrop-blur-md rounded-3xl"
             style={{
-              maskImage: 'radial-gradient(ellipse at center, black 55%, transparent 100%)',
-              WebkitMaskImage: 'radial-gradient(ellipse at center, black 55%, transparent 100%)',
+              maskImage: 'radial-gradient(ellipse at center, black 60%, transparent 100%)',
+              WebkitMaskImage: 'radial-gradient(ellipse at center, black 60%, transparent 100%)',
             }}
           />
 
-          <div className="p-4 sm:p-6 md:p-8 lg:p-10">
+          <div className="relative p-4 sm:p-6 md:p-8 lg:p-10">
             {/* Subtitle */}
-            <p className="hero-subtitle hero-anim-subtitle text-primary font-medium text-sm sm:text-base md:text-lg lg:text-xl mb-3 sm:mb-4 lg:mb-6">
+            <p className="hero-subtitle hero-anim-subtitle text-primary font-medium tracking-wide text-sm sm:text-base md:text-lg mb-3 sm:mb-4 lg:mb-5">
               Phranakhon Rajabhat University
             </p>
 
             {/* Main Heading */}
             <div className="hero-heading hero-anim-heading mb-4 sm:mb-5 lg:mb-6">
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-pnru leading-tight mb-2">
+              <h1 className="text-3xl sm:text-4xl md:text-[2.75rem] lg:text-[3.25rem] font-semibold text-pnru mb-1">
                 ค้นหาสาขาที่ใช่
               </h1>
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-black leading-tight">
+              <h1 className="text-3xl sm:text-4xl md:text-[2.75rem] lg:text-[3.25rem] font-semibold text-black">
                 ในคณะวิทย์ PNRU
               </h1>
             </div>
 
             {/* Description */}
-            <p className="hero-description hero-anim-description text-gray-800 text-sm sm:text-base md:text-lg lg:text-xl mb-6 sm:mb-8 lg:mb-10 leading-relaxed">
-              ตอบแบบสอบถามสั้น ๆ เพื่อค้นหาสาขาที่เหมาะกับความถนัด<br />
+            <p className="hero-description hero-anim-description text-gray-800 text-[15px] sm:text-base md:text-lg mb-6 sm:mb-8 lg:mb-10 leading-relaxed">
+              ตอบแบบสอบถามสั้น ๆ เพื่อค้นหาสาขาที่เหมาะกับความถนัด<br className="hidden md:inline" />
               และความสนใจของคุณ
             </p>
 
