@@ -105,6 +105,17 @@ body.nav-open {
   line-height: 1.24;
 }
 
+/* ขีดสั้นเหนือชื่อมหาวิทยาลัย — ป้ายกำกับหน่วยงานแบบเอกสารทางการ
+   ทำด้วย ::before เพื่อให้เคลื่อนไหวเข้าพร้อมบรรทัดเดียวกันและไม่ต้องเพิ่ม element ใน JSX */
+.hero-section .hero-subtitle::before {
+  content: '';
+  display: block;
+  width: 2.25rem;
+  height: 3px;
+  margin-bottom: 0.75rem;
+  background: #016a2b;
+}
+
 /* Hero Section entrance animation — scoped to .hero-section only */
 .hero-section {
   --hero-anim-distance: 20px;
