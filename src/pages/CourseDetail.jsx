@@ -106,7 +106,12 @@ const CourseDetail = () => {
       // จับคู่ด้วยชื่อหลักสูตร ไม่ใช่รหัส เพราะฐานข้อมูลสองฝั่งใช้รหัสคนละชุดกัน
       // ล้มเหลวเมื่อไรก็แค่ไม่ได้ข้อมูลเสริม หน้ายังแสดงค่าจากฐานข้อมูลเดิมตามปกติ
       try {
-        const res = await fetch(`/api/course-facts?title=${encodeURIComponent(data.title)}`)
+        // ส่ง course_id ไปด้วยเมื่อมี เหตุผลเดียวกับหน้าเปรียบเทียบ — ชื่อสาขาอย่างเดียว
+        // แยกระดับปริญญาไม่ได้ และสองหลักสูตรที่ชื่อเหมือนกันจะหยิบมาผิดเล่มได้
+        const q = new URLSearchParams({ title: data.title })
+        if (data.course_id) q.set('course_id', data.course_id)
+        if (data.detail?.level) q.set('level', data.detail.level)
+        const res = await fetch(`/api/course-facts?${q.toString()}`)
         if (res.ok) setFacts(await res.json())
       } catch {
         /* ไม่มีข้อมูลเสริมก็แสดงเท่าที่มี */

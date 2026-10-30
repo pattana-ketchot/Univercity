@@ -69,8 +69,15 @@ const CompareResult = () => {
     let cancelled = false
     const load = async () => {
       const pairs = await Promise.all(selectedCourses.map(async (course) => {
+        // ส่ง course_id ไปด้วยเสมอเมื่อมี — ชื่อสาขาอย่างเดียวแยกระดับปริญญาไม่ได้
+        // คณะมีสาขาที่ชื่อเหมือนกันทุกตัวอักษรแต่เป็นคนละระดับ (โท/เอก) ถ้าเทียบด้วยชื่อ
+        // ปี หน่วยกิต และเอกสารอาจเป็นของอีกหลักสูตรโดยไม่มีอะไรบอก
+        const query = new URLSearchParams({ title: course.title })
+        if (course.course_id) query.set('course_id', course.course_id)
+        // ระดับปริญญาเป็นทางถอยเมื่อแถวบนเว็บยังไม่มี course_id (สองสาขาของคณะยังเป็นแบบนั้น)
+        if (levelOf(course)) query.set('level', levelOf(course))
         try {
-          const res = await fetch('/api/course-facts?title=' + encodeURIComponent(course.title))
+          const res = await fetch('/api/course-facts?' + query.toString())
           return res.ok ? [course.id, await res.json()] : null
         } catch {
           return null
@@ -85,10 +92,20 @@ const CompareResult = () => {
   const toggleCareers = (courseId) =>
     setExpandedCareers((prev) => ({ ...prev, [courseId]: !prev[courseId] }))
 
-  // เอกสารฉบับเต็มของสาขานั้น — ฉบับย่อไม่เอามาเป็นปุ่มหลัก เพราะคนกดอยากได้เล่มจริง
+  // เอกสารที่ปุ่ม "ดูเอกสาร" จะเปิด — เล่มเต็มก่อนเสมอ
+  //
+  // ใช้ธง brief ที่หลังบ้านส่งมา (ดูจากชื่อไฟล์จริง) ไม่ใช่การค้นคำว่า "ฉบับย่อ" ในข้อความ
+  // ที่แสดง ซึ่งเป็นการเดาจากถ้อยคำและพังทันทีที่ถ้อยคำเปลี่ยน
+  //
+  // ถ้ามีแต่ฉบับย่อ ก็ให้เปิดฉบับย่อได้ แต่ต้องติดป้ายว่าเป็นฉบับย่อ ห้ามปล่อยให้เข้าใจว่า
+  // กำลังเปิดเล่มเต็ม · ไม่รู้ว่าเล่มไหนเป็นอะไร (หลังบ้านรุ่นเก่าไม่ส่งธงมา) ก็ไม่เดาเช่นกัน
   const mainDocumentOf = (courseId) => {
     const docs = facts[courseId]?.documents || []
-    return docs.find((d) => !d.name.includes('ฉบับย่อ')) || docs[0] || null
+    const full = docs.find((d) => d.brief === false)
+    if (full) return { ...full, isBrief: false }
+    const brief = docs.find((d) => d.brief === true)
+    if (brief) return { ...brief, isBrief: true }
+    return docs[0] ? { ...docs[0], isBrief: null } : null
   }
 
   const runAiCompare = async () => {
@@ -241,7 +258,8 @@ const CompareResult = () => {
                 className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border-2 border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 <FileText className="w-4 h-4" />
-                ดูเอกสาร
+                {doc.isBrief === true ? 'ดูเอกสาร (ฉบับย่อ)'
+                  : doc.isBrief === false ? 'ดูเอกสาร' : 'ดูเอกสารของสาขานี้'}
               </a>
             ) : (
               <span className="text-xs text-gray-400">ยังไม่มีเอกสารให้เปิด</span>
